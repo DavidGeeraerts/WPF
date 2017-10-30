@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.93.0
+SET SCRIPT_VERSION=0.94.1
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=100 lines=50
 Prompt WPF$G
@@ -134,6 +134,11 @@ SET ULTIMATE_FILE_NAME=
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
 SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
 
+::###########################################################################::
+::            *******************
+::            Advanced Settings 
+::            *******************
+::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
 SET PROCESS_1_FILE_NAME=RUN_Administrator_configured_%SCRIPT_VERSION%.txt
@@ -152,9 +157,7 @@ SET PROCESS_6_FILE_NAME=RUN_Ultimate_%SCRIPT_VERSION%.txt
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 
 
-::*******************::
-:: Advanced Settings ::
-::*******************::
+
 :: To cleanup or Not to cleanup, the seed location
 ::	0 = OFF (NO)
 ::	1= ON (YES)
@@ -210,11 +213,13 @@ SET RSAT_ATTEMPT=0
 ECHO START %DATE% %TIME%
 ECHO %SCRIPT_NAME% %SCRIPT_VERSION%
 ECHO.
-
+ECHO Processing the configuration file [%SCRIPT_NAME%.config]...
+ECHO.
 ::###########################################################################::
 :: CONFIGURATION FILE OVERRIDE
 ::###########################################################################::
 :: START CONFIGURATION FILE LOAD
+::
 REM Any configuration variable being pulled from the configuration file that is using another variable
 REM  needs to be reset so as not to take the string from the configuration file literally.
 REM  This solves the problem when build in variables are used such as %PROGRAMDATA%
@@ -245,7 +250,7 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DISKPART_COMMAND_FILE" "%~dp0\
 ::   NETDOM_DOMAIN
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_DOMAIN" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "NETDOM_DOMAIN=%%V"
 ::   NETDOM_USERD
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_USERD" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "NETDOM_USERD=%%V"
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_USERD=" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "NETDOM_USERD=%%V"
 ::   NETDOM_PASSWORDD
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_PASSWORDD" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "NETDOM_PASSWORDD=%%V"
 ::   NETDOM_USERD_PW_FILE
@@ -276,27 +281,6 @@ FOR /F %%R IN ('ECHO %LOG_LOCATION%') DO SET LOG_LOCATION=%%R
 ::   LOG_FILE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_FILE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_FILE=%%V"
 FOR /F %%R IN ('ECHO %LOG_FILE%') DO SET LOG_FILE=%%R
-::   PROCESS_1_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_1_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_1_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_1_FILE_NAME%') DO SET PROCESS_1_FILE_NAME=%%R
-::   PROCESS_2_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_2_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_2_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_2_FILE_NAME%') DO SET PROCESS_2_FILE_NAME=%%R
-::   PROCESS_3_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_3_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_3_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_3_FILE_NAM%') DO SET PROCESS_3_FILE_NAM=%%R
-::   PROCESS_4_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_4_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_4_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_4_FILE_NAME%') DO SET PROCESS_4_FILE_NAME=%%R
-::   PROCESS_5_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_5_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_5_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_5_FILE_NAME%') DO SET PROCESS_5_FILE_NAME=%%R
-::   PROCESS_6_FILE_NAME
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_6_FILE_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_6_FILE_NAME=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_6_FILE_NAME%') DO SET PROCESS_6_FILE_NAME=%%R
-::   PROCESS_COMPLETE_FILE
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_COMPLETE_FILE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_COMPLETE_FILE=%%V"
-FOR /F %%R IN ('ECHO %PROCESS_COMPLETE_FILE%') DO SET PROCESS_COMPLETE_FILE=%%R
 
 :: Advanced Settings
 ::   SEED_LOCATION_CLEANUP
@@ -319,8 +303,6 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_FATAL" "%~dp0\%CONFI
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_DEBUG" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_DEBUG=%%V"
 ::   LOG_LEVEL_TRACE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_TRACE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_TRACE=%%V"
-::   PROCESS_CHECK_NUMBER
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"PROCESS_CHECK_NUMBER" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "PROCESS_CHECK_NUMBER=%%V"
 ::   RSAT_PACKAGE_W10x64
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"RSAT_PACKAGE_W10x64" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "RSAT_PACKAGE_W10x64=%%V"
 
@@ -330,7 +312,7 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"RSAT_PACKAGE_W10x64" "%~dp0\%C
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: CHECK TO MAKE SURE LOG LOCATION WORKS!
-IF NOT EXIST %LOG_LOCATION% MD %LOG_LOCATION% || GoTo err000
+IF NOT EXIST %LOG_LOCATION% MD %LOG_LOCATION% || GoTo err00
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO [INFO]	START %DATE% %TIME%) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO [DEBUG]	ALL logging is turned on!) >> %LOG_LOCATION%\%LOG_FILE%
 
@@ -396,6 +378,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Log level TRACE is [%LOG_LEVEL_TRACE%] >
 :: Start of variable debug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
+ECHO [DEBUG]	VARIABLE: CONFIG_FILE_NAME set to %CONFIG_FILE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION set to %WPF_CONFIG_SCHEMA_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: LOG_LOCATION set to %LOG_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: LOG_FILE set to %LOG_FILE% >> %LOG_LOCATION%\%LOG_FILE%
@@ -431,6 +414,8 @@ ECHO [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED set to %CHOCOLATEY_ADVANCED% >> %LOG_
 ECHO [DEBUG]	VARIABLE: CHOCO_META_PACKAGE_LIST set to %CHOCO_META_PACKAGE_LIST% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: PROCESS_CHECK_NUMBER set to %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64 set to %RSAT_PACKAGE_W10x64% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: RSAT_ATTEMPT set to %RSAT_ATTEMPT% >> %LOG_LOCATION%\%LOG_FILE%
+
 :varE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 
@@ -454,11 +439,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	EXIT: FUNCTION Start!) >> %LOG_LOCATION
 :metaDC
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: META Dependency Check! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Working on meta dependencies...
-
+ECHO.
 ::	(1) Is everyting already done?
 Echo Checking to see if everything is already done...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: for Everything Already Done? >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo err10
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo err100
 ECHO First run or a follow up run!
 
 ::	(2) Get the Flash Drive Volume
@@ -529,9 +514,6 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: checking if Cho
 SET CHOCO_PRESENCE=0
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %CHOCO_LOCATION%\choco.exe SET CHOCO_PRESENCE=1
-:: Just in case PATH doesn't contain choco
-IF EXIST %CHOCO_LOCATION%\choco.exe SET "PATH=%PATH%;%CHOCO_LOCATION%\"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG] PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %CHOCO_LOCATION%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
 IF EXIST %CHOCO_LOCATION%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_CHOCOLATEY% is present!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -555,7 +537,9 @@ Echo Checking for host database...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database found!
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database not found!
-IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err1
+IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG] Host database found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]  Host database NOT found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Dependency Check for looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 :: jump to create a scheduled task
 GoTo autoSU
@@ -566,7 +550,7 @@ GoTo autoSU
 ::	will try and insatll Remote Server Administration Tools (NETDOM) from Flash drive
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
-IF %RSAT_ATTEMPT% EQU 1 GoTo err0
+IF %RSAT_ATTEMPT% EQU 1 GoTo err01
 ECHO Attempting to install RSAT NETDOM...
 IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "msu" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt) ELSE (
 	IF EXIST %FLASH_DRIVE_VOLUME% dir /B /A %FLASH_DRIVE_VOLUME% | FIND /I "msu" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
@@ -578,8 +562,12 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Trying to install:[%NETDOM_INSTALL%]... >>
 ECHO Installing NETDOM with this installer [%NETDOM_INSTALL%]...
 ECHO (Computer will reboot after instalation!)
 SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT_ATTEMPT just got set to [%RSAT_ATTEMPT%]! >> %LOG_LOCATION%\%LOG_FILE%
+ECHO. >> %LOG_LOCATION%\%LOG_FILE%
 "%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet
+:: Wait for RSAT Rebooting
+TIMEOUT 15
 :: Computer should be rebooting now so that RSAT can configure properly
 ::  will never reach here if everything worked correctly
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT installer return code: %ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
@@ -602,9 +590,9 @@ GoTo trap31
 
 :autoSU
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-:: decide where to go
+:: Decide where to go
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% GoTo start
-IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt GoTo start
+IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo start
 SCHTASKS /Query /TN "%SCRIPT_NAME%" && IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo stepSTD
 SCHTASKS /Query /TN "%SCRIPT_NAME%" || GoTo stepSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -645,6 +633,9 @@ ECHO Working on Scheduled Task as a domain computer...
 :trapSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Query /TN "%SCRIPT_NAME%" || IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] doesn't already exist, and was expected! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo skipSTD
+IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" || GoTo fSTD
+
 
 :fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -656,8 +647,7 @@ ECHO 1 > %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE%
 SET /P TS_D_REBOOT= < %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
-:: Need to reboot to run as the domain account
-shutdown /R /T 30 
+:: Computer should be in a reboot cycle
 GoTo feTime
 
 :skipSTD
@@ -688,10 +678,16 @@ IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% GoTo skip1
 :fadmin
 :: FUNCTION Configure local administrator account
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION [1] Configure local administrator >> %LOG_LOCATION%\%LOG_FILE%
-NET USER Administrator %ADMIN_PASSWORD% /ACTIVE:YES
-IF %ERRORLEVEL% EQU 0 ECHO %DATE% %TIME% Local Administrator account configured/Re-configured! >> %LOG_LOCATION%\%PROCESS_1_FILE_NAME%
+SET LOCAL_ADMINISTRATOR_STATUS=0
+NET USER Administrator && SET LOCAL_ADMINISTRATOR_STATUS=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
+NET USER Administrator %ADMIN_PASSWORD% /ACTIVE:YES || SET LOCAL_ADMINISTRATOR_STATUS=0
+IF %LOG_LEVEL_DEBUG% EQU 0 ECHO [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOCAL_ADMINISTRATOR_STATUS% EQU 1 ECHO %DATE% %TIME% Local Administrator account configured/Re-configured! >> %LOG_LOCATION%\%PROCESS_1_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Local Administrator account configured/Re-configured!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% ECHO Local Administrator account configured/Re-configured!
+IF %LOCAL_ADMINISTRATOR_STATUS% EQU 0 GoTo err10
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: FUNCTION [1] Configure local administrator >> %LOG_LOCATION%\%LOG_FILE%
 :: Go setup the Scheduled Task now that local administrator is configured
 GoTo stepSTL
 
@@ -720,7 +716,12 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION Diskpart! >> %LOG_LOCATI
 ECHO DISKPART is running...
 ECHO %DATE% %TIME% DISKPART is running... >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
 DISKPART /s %POST_FLIGHT_DIR%\%DISKPART_COMMAND_FILE% >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
-IF %ERRORLEVEL% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Diskpart completed!) ELSE (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Diskpart threw an error [%ERRORLEVEL%]! Check disk configuration!) >> %LOG_LOCATION%\%LOG_FILE%
+SET DISKPART_ERROR=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[DISKPART_ERROR] set to [%DISKPART_ERROR%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% GTR 0 GoTo err20
+IF %DISKPART_ERROR% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Diskpart completed successfully!) ELSE (
+     IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Diskpart threw an error [%DISKPART_ERROR%]! Check disk configuration!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% LSS 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Since the diskpart error [%DISKPART_ERROR%] is a negative number, most likely diskpart completed successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE% %TIME% DISKPART finnished! >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
 ECHO DISKPART finnished!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: FUNCTION Diskpart! >> %LOG_LOCATION%\%LOG_FILE%
@@ -734,6 +735,7 @@ ECHO DiskPart has already run!
 GoTo step3
 :://///////////////////////////////////////////////////////////////////////////
 
+
 :://///////////////////////////////////////////////////////////////////////////
 :step3
 :: Aquire the local MAC address and lookup host database file inorder to set the new hostname.
@@ -746,23 +748,26 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap3 >> %LOG_LOCATION%\%LOG_FILE
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% GoTo skip3
 IF /I "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Hostname:[%COMPUTERNAME%] needs to be changed!) >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" ECHO Hostname:[%COMPUTERNAME%] needs to be changed!
+IF /I NOT "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Current computer name [%COMPUTERNAME%] is not the same as default hostname [%DEFAULT_HOSTNAME%]. The hostname will still be attempted to be changed based on Host file database [%HOST_FILE_DATABASE%].) >> %LOG_LOCATION%\%LOG_FILE%
 GoTo fmac
 
 :fmac
 :: FUNCTION	GET MAC Address
 :: Getting the Host MAC Address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION GETMAC >> %LOG_LOCATION%\%LOG_FILE%
-GETMAC > %LOG_LOCATION%\Host_MAC.txt
+GETMAC > %LOG_LOCATION%\Host_MAC.txt || GoTo err31
 ::	search the getmac file & set mac based on mac database
+IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
 FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\Host_MAC.txt) DO FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% && SET HOST_MAC=%%G
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	HOST_MAC: %HOST_MAC% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Computer MAC: %HOST_MAC%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: FUNCTION GETMAC >> %LOG_LOCATION%\%LOG_FILE%
 GoTo trap31
 
 :trap31
 :: Trap to catch if NETDOM is present or not
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_ATTEMPT% GEQ 1 GoTo err0
+IF %RSAT_ATTEMPT% GEQ 1 GoTo err01
 IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
 GoTo fhost
 
@@ -771,12 +776,14 @@ GoTo fhost
 ::	based on MAC address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION Set the hostname >> %LOG_LOCATION%\%LOG_FILE%
 FIND "%HOST_MAC%" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% > %LOG_LOCATION%\MAC-2-HOST.txt
+IF NOT EXIST %LOG_LOCATION%\MAC-2-HOST.txt GoTo err33
+IF EXIST %LOG_LOCATION%\MAC-2-HOST.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [MAC-2-HOST.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE%
 :: Strip the MAC address from the file and set the hostname
-FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\MAC-2-HOST.txt") DO SET HOST_STRING=%%G
+FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\MAC-2-HOST.txt") DO SET HOST_STRING=%%G || GoTo err33
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	HOST_STRING: %HOST_STRING% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "HOST_STRING"=="" (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Hostname [%HOST_STRING%] found in HOST_FILE_DATABASE [%HOST_FILE_DATABASE%]) >>	%LOG_LOCATION%\%LOG_FILE%
 IF /I %COMPUTERNAME%==%HOST_STRING% GoTo Skip3
-NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || GoTo err3
+NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || GoTo err30
 IF %ERRORLEVEL% EQU 0 Echo %DATE% %TIME% Hostname [%COMPUTERNAME%] is being changed to [%HOST_STRING%]! > %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Hostname [%COMPUTERNAME%] has been renamed to: %HOST_STRING%) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO Hostname [%COMPUTERNAME%] has been renamed to: %HOST_STRING%
@@ -796,9 +803,10 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Hostname already set [%COMPUTERNAME%]! >> 
 ECHO Hostname already set [%COMPUTERNAME%]!
 IF EXIST %LOG_LOCATION%\Host_MAC.txt TYPE %LOG_LOCATION%\Host_MAC.txt >> %PROCESS_3_FILE_NAME% && del /F /Q %LOG_LOCATION%\Host_MAC.txt
 IF EXIST %LOG_LOCATION%\MAC-2-HOST.txt TYPE %LOG_LOCATION%\MAC-2-HOST.txt >> %PROCESS_3_FILE_NAME% && del /F /Q %LOG_LOCATION%\MAC-2-HOST.txt
+IF NOT EXIST %LOG_LOCATION%\Host_MAC.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File Host_MAC.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\MAC-2-HOST.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File MAC-2-HOST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
-
 
 
 :://///////////////////////////////////////////////////////////////////////////
@@ -811,10 +819,11 @@ ECHO STEP 4: Working on joining the computer to a Windows Domain network...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap4 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 :: Check to make sure a domain is configured, otherwise not joining a domain
-IF /I "%NETDOM_DOMAIN%"=="" (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Not joining a domain! No Domain provided in configuration!) >> %LOG_LOCATION%\%LOG_FILE%
-IF /I "%NETDOM_DOMAIN%"=="NOT_SET" (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Not joining a domain! Domain was not set in configuration!) >> %LOG_LOCATION%\%LOG_FILE%
-IF /I "%NETDOM_DOMAIN%"=="NOT_SET" GoTo trap41
-IF /I "%NETDOM_DOMAIN%"=="" GoTo trap41
+IF /I "%NETDOM_DOMAIN%"=="" (IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	No Domain provided in configuration!) >> %LOG_LOCATION%\%LOG_FILE%
+IF /I "%NETDOM_DOMAIN%"=="NOT_SET" (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Not joining a domain! Domain was configured to skip!) >> %LOG_LOCATION%\%LOG_FILE%
+IF /I "%NETDOM_DOMAIN%"=="NOT_SET" GoTo step5
+IF NOT DEFINED NETDOM_DOMAIN GoTo step5
+IF /I NOT "%NETDOM_DOMAIN%"=="" GoTo trap41
 
 :trap41
 :: TRAP4.1 to catch if the computer has already been joined to a domain
@@ -823,7 +832,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap4.1 >> %LOG_LOCATION%\%LOG_FI
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDOMAIN%" GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDNSDOMAIN%" GoTo skip4
-IF %NETDOM_PRESENCE% EQU 0 GoTo err3
+IF %NETDOM_PRESENCE% EQU 0 GoTo err01
+:: Check to make sure computer can communicate with Windows domain
+::  DNS is required
+NSLOOKUP %NETDOM_DOMAIN% | FIND "Name" || GoTo err42
 GoTo fdomain
 
 :fdomain
@@ -831,7 +843,7 @@ GoTo fdomain
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION Joining domain >> %LOG_LOCATION%\%LOG_FILE%
 cls
 ECHO Supply the domain account [%NETDOM_DOMAIN%\%NETDOM_USERD%] password to join [%NETDOM_DOMAIN%] domain:
-NETDOM JOIN %COMPUTERNAME% /DOMAIN:%NETDOM_DOMAIN% /USERD:%NETDOM_USERD% /PASSWORDD:%NETDOM_PASSWORDD% /REBoot:%NETDOM_REBOOT% || GoTo err31
+NETDOM JOIN %COMPUTERNAME% /DOMAIN:%NETDOM_DOMAIN% /USERD:%NETDOM_USERD% /PASSWORDD:%NETDOM_PASSWORDD% /REBoot:%NETDOM_REBOOT% || GoTo err41
 IF %ERRORLEVEL% EQU 0 ECHO %DATE% %TIME% Joined [%NETDOM_DOMAIN%] domain >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Joined [%NETDOM_DOMAIN%] domain!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
@@ -857,7 +869,7 @@ ECHO STEP 5: Working on Chocolatey package management...
 :: TRAP 5 to catch if Chocolatey has already run
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap5 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_5_FILE_NAME% GoTo skip5
-IF %CHOCO_PRESENCE% EQU 0 GoTo err5
+IF %CHOCO_PRESENCE% EQU 0 GoTo err50
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap5 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo trap51
 
@@ -873,7 +885,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap5.1 >> %LOG_LOCATION%\%LOG_FIL
 :fchoco
 :: Check if available first
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: FUNCTION Chocolatey >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %CHOCO_LOCATION%\choco.exe GoTo err5
+IF NOT EXIST %CHOCO_LOCATION%\choco.exe GoTo err50
 
 ::	variable combine
 SET /P CHOCO_PACKAGE_RUN= < %CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%
@@ -904,7 +916,7 @@ ECHO STEP 6: Working on processing the Ultimate Commandlet...
 :: TRAP6 is to catch if the Ultimat file has been processed
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap6 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% GoTo skip6
-IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err6
+IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err60
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap6 >> %LOG_LOCATION%\%LOG_FILE%
 
 :trap61
@@ -943,6 +955,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Sub-Routine [subr1] Chocolatey in
 ::		https://chocolatey.org/install#install-with-cmdexe
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Sub-Routine [subr1] just installed Chocolatey with exit code: %ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG] PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %CHOCO_LOCATION%\choco.exe SET CHOCO_PRESENCE=1
 IF EXIST %CHOCO_LOCATION%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
 IF EXIST %CHOCO_LOCATION%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
@@ -1108,20 +1121,27 @@ IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (IF %LOG_L
 
 :: Text file cleanup when everything is complete
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log)
-IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%) && DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
+IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
+     IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
+	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
+IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
 :: Process Registry Sub-Routine
 GoTo subr4
 :jump4
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
+
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
 :: cleanup the scheduled task
-IF EXIST %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%) && DEL /F /Q %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
+     IF EXIST %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)) && DEL /F /Q %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 IF NOT EXIST %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[TASK_SCHEDULER_%SCRIPT_NAME%.txt] file just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
 
 :endc
-:: ending when complete (this is a jump spot for err10 --when everything is already done).
+:: ending when complete (this is a jump spot for err100 --when everything is already done).
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Ending for complete >> %LOG_LOCATION%\%LOG_FILE%
 :: 	the following var_files get created each time the commandlet runs 
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt)
@@ -1151,9 +1171,12 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: SEED cleanup >> %LOG_LOCATION%\%LO
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: end >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: START ERROR SECTION
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::                    START ERROR SECTION
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 00's (DEPENDENCY ERROR)
 
 :errCONF
 :: ERROR CONF is a FATAL ERROR for NO configuration file
@@ -1161,107 +1184,168 @@ Color 4E
 ECHO %DATE% %TIME% [FATAL]	FATAL ERROR! NO CONFIGURATION FILE [.\%CONFIG_FILE_NAME%] FOUND! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 ECHO FATAL ERROR!
 ECHO NO CONFIGURATION FILE WAS FOUND
-PAUSE
+TIMEOUT 300
 EXIT 
 
-:err000
-:: ERROR 000 FATAL ERROR for folder cannot be created
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error000 >> %LOG_LOCATION%\%LOG_FILE%
+:err00
+:: ERROR 00 FATAL ERROR for folder cannot be created
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error00 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO [FATAL]	Folder [%LOG_LOCATION%] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	Exit error000 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	Exit error00 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
-:err0
-:: ERROR 0 (NETDOM)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error0 >> %LOG_LOCATION%\%LOG_FILE%
+:err01
+:: ERROR 01 (NETDOM)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error01 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	NETDOM is not installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error0 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error01 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
-:err1
-:: ERROR 1 (No Host Database Found)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error1 >> %LOG_LOCATION%\%LOG_FILE%
+:err02
+:: ERROR 02 (No Host Database Found)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error02 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	The Host File database was not found! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Looking for: %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO [FATAL]	Aborting %SCRIPT_NAME% due to host file database [%HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%] NOT FOUND! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO FATAL ERROR: NO HOST DATABASE FOUND! ABORTING!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error02 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
-:err3
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 10's (Local Administrator)
+:err10
+:: ERROR 10 Local Administrator configuration failed
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error10 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO [FATAL]	Local Administrator account doesn't exist! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO [FATAL]	Aborting %SCRIPT_NAME% due to no default local adminstrator account! >> %LOG_LOCATION%\%LOG_FILE%
+ECHO FATAL ERROR: NO LOCAL ADMINISTRATOR ACCOUNT! ABORTING!
+GoTo feTime
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error10 >> %LOG_LOCATION%\%LOG_FILE%
+
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 20's (Disk Configuration)
+:err20
+:: ERROR 20 Diskpart
+::  These errors are from source documentaion:
+::   https://technet.microsoft.com/en-us/library/bb490893.aspx
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error20 >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% EQU 1 IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	A fatal exception occurred. There may be a serious problem. >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% EQU 2 IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	The parameters specified for a DiskPart command were incorrect. >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% EQU 3 IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	DiskPart was unable to open the specified script or output file. >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% EQU 4 IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	One of the services DiskPart uses returned a failure. >> %LOG_LOCATION%\%LOG_FILE%
+IF %DISKPART_ERROR% EQU 5 IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	A command syntax error occurred. The script failed because an object was improperly selected or was invalid for use with that command. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error20 >> %LOG_LOCATION%\%LOG_FILE%
+
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 30's (Hostname)
+
+:err30
+:: ERROR 30 Hostname
 ::	ERROR 3 (Failed to rename computer & Failed to join a domain)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error3 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	DEPENDENCY FAILURE: Can't Rename computer! NETDOM is not present! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	DEPENDENCY FAILURE: Can't join a Windows Domain! NETDOM is not present! >> %LOG_LOCATION%\%LOG_FILE%
-:: SET /A "PROCESS_CHECK_NUMBER-=2"
-:: ECHO [INFO]	PROCESS_CHECK_NUMBER has been reset to: %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error3 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error30 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Something went wrong trying to rename the computer! Can't Rename hostname! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error30 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 
 :err31
-::	ERROR 3.1 (Computer failed to join)
+:: ERROR 31 Host file database
+
+
+:err32
+:: ERROR 31 LOCAL MAC
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error31 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	NETDOM failed to join the computer [%COMPUTERNAME%]to domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Aborting joining the domain! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	GETMAC error to get computer MAC! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Skipping Steps 3 & 4! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error31 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 
-:err2
-:: ERROR 2 (Failed to join Domain)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error2 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Failed to join domain! [%NETDOM_DOMAIN%] >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Aborting Domain join! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error2 >> %LOG_LOCATION%\%LOG_FILE%
+:err33
+:: ERROR 33 Setting the hostname
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error33 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Something went wrong with setting the hostname! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Skipping Steps 3 & 4! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error33 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 
-:err5
-:: ERROR 5 (Chocolatey is not present)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error6 >> %LOG_LOCATION%\%LOG_FILE%
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 40's (DOMAIN JOIN)
+
+:err40
+:: ERROR 40 (Failed to join Domain General)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error40 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Failed to join domain! [%NETDOM_DOMAIN%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Aborting Domain join! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error40 >> %LOG_LOCATION%\%LOG_FILE%
+GoTo step5
+
+:err41
+::	ERROR 3.1 (Computer failed to join domain due to NETDOM)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error41 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	NETDOM failed to join the computer [%COMPUTERNAME%]to domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Aborting joining the domain! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error41 >> %LOG_LOCATION%\%LOG_FILE%
+GoTo step5
+
+:err42
+:: No DNS to communicate with configured Windows Domain
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error42 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [FATAL]	Failed to communicate with Windows DNS to [%NETDOM_DOMAIN%] domain! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Aborting joining the domain! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error42 >> %LOG_LOCATION%\%LOG_FILE%
+GoTo step5
+
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 50's (CHOCOLATEY)
+
+:err50
+:: ERROR 50 (Chocolatey is not present)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error50 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Chocolatey is not present! Aborting Chocolatey step! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Expecting Chocolatey to be here: %CHOCO_LOCATION%\choco.exe >> %LOG_LOCATION%\%LOG_FILE%
-:: SET /A "PROCESS_CHECK_NUMBER-=1"
-:: ECHO [INFO]	PROCESS_CHECK_NUMBER has been reset to: %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error5 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error50 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step6
 
 :err51
-:: ERROR 5.1 (Advanced Chocolatey error catching for NO criteria files)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error5.1 >> %LOG_LOCATION%\%LOG_FILE%
+:: ERROR 51 (Advanced Chocolatey error catching for NO criteria files)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error51 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO	[ERROR]	No chocolatey criteria files found! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO	[ERROR]	Aborting advanced chocolatey! >> %LOG_LOCATION%\%LOG_FILE%
 SET CHOCOLATEY_ADVANCED=0
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error5.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error51 >> %LOG_LOCATION%\%LOG_FILE%
 :: return to normal chocolatey package install
 GoTo step5
 
-:err6
-:: ERROR 6 (Ulimate file cannot be found or is off-line)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error6 >> %LOG_LOCATION%\%LOG_FILE%
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 60's (ULTIMATE)
+
+:err60
+:: ERROR 60 (Ulimate file cannot be found or is off-line)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error60 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	FAILED to load Ultimate FILE [%ULTIMATE_FILE_NAME%] from %ULTIMATE_FILE_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %ULTIMATE_FILE_LOCATION% ECHO [ERROR]	Ultimate file location [%ULTIMATE_FILE_LOCATION%] is OFF-LINE! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Aborting running [%ULTIMATE_FILE_NAME%]!
-:: SET /A "PROCESS_CHECK_NUMBER-=1"
-:: ECHO PROCESS_CHECK_NUMBER has been reset to: %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error6 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error60 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
 :err61
-:: ERROR 6.1 (Ulimate file doesn't meet the exit requirements) commandlet self-presevation
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO	[TRACE]	ENTER: error6.1 >> %LOG_LOCATION%\%LOG_FILE%
+:: ERROR 61 (Ulimate file doesn't meet the exit requirements) commandlet self-presevation
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO	[TRACE]	ENTER: error61 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO	[ERROR]	The Ultimate commandlet [%ULTIMATE_FILE_NAME%] doesn't meet the "EXIT /B" requirement! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_WARN% EQU 1 ECHO	[WARN]	Aborting running the Ultimate commandlet [%ULTIMATE_FILE_NAME%] >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO	[TRACE]	EXIT: error6.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO	[TRACE]	EXIT: error61 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
-:err10
-:: ERROR (Everything already ran)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error10 >> %LOG_LOCATION%\%LOG_FILE%
+:://///////////////////////////////////////////////////////////////////////////
+:: ERROR LEVEL 100 (DONE)
+:err100
+:: ERROR 100 (Everything already ran)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: error100 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [INFO]	EVERYTHING IS ALREADY DONE? >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [INFO]	%PROCESS_COMPLETE_FILE% Exists! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [INFO]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% ECHO %DATE% %TIME% %SCRIPT_NAME%_%SCRIPT_VERSION% ATTEMPTED BUT ABORTED! >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error10 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error100 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo endc
 
 :: END ERROR SECTION
@@ -1306,7 +1390,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LO
 IF %LOG_LEVEL_INFO% EQU 1 Echo [INFO]	END %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
-TIMEOUT 30
 ENDLOCAL
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
+TIMEOUT 30
 EXIT
