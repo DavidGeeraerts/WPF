@@ -32,9 +32,9 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.94.1
+SET SCRIPT_VERSION=0.96.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=100 lines=50
+mode con:cols=100
 Prompt WPF$G
 color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -55,28 +55,29 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=0.2.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
-::###########################################################################::
+:://///////////////////////////////////////////////////////////////////////////
 
 
 
 :: Working Directory for Post-Flight
-::	this is also the (local storage) seed location for Post-Flight
+::  this is also the (local storage) seed location for Post-Flight
 SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
 SET "POST_FLIGHT_CMD_NAME=Windows_Post-Flight.cmd"
 
-::	FLASH Drive
-::		provide the label for the flash drive
-::		flash drive should contain all of the necessary files, especially if not preseeded in the working directory
+:: FLASH Drive
+::  provide the label for the flash drive
+::  flash drive should contain all of the necessary files, especially if not preseeded in the working directory
 SET FLASH_DRIVE_VOLUME_LABEL=POSTFLIGHT
 
 :: File that contains host 'database'
-:: 	FLASH DRIVE acts as the backup & update location for HOST_FILE_DATABASE (& OTHER assets)
-::	format
-::	#Hostname #MAC 00-00-00-00-00-00
-::	%HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%
-::		this is the location and file name where the commandlet expects it
-::		commandlet will auto-update from [source] flash drive to destination
+::  FLASH DRIVE acts as the backup & update location for HOST_FILE_DATABASE (& OTHER assets)
+::   format
+::    #Hostname #MAC 00-00-00-00-00-00
+::    %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%
+::    this is the location and file name where the commandlet expects it
+::    commandlet will auto-update from [source] flash drive to destination
 SET "HOST_FILE_DATABASE_LOCATION=%POST_FLIGHT_DIR%"
 SET HOST_FILE_DATABASE=Host_MAC_List.txt
 
@@ -86,21 +87,21 @@ SET DEFAULT_HOSTNAME=RENAME
 SET DEFAULT_USER=WindowsPostFlightUser
 
 :: Local Administrator Password
-::	assumes it will be in the working directory
+::  assumes it will be in the working directory
 SET LOCAL_ADMIN_PW_FILE=Local_Administrator_Password.txt
 
 :: Hard Drive Configuration
-::	assumes it will be in the working directory
+::  assumes it will be in the working directory
 SET DISKPART_COMMAND_FILE=DiskPart_Hard_Drive_Config.txt
 
 
 :: NETDOM CONFIGURATION
-::	to skip this step, leave domain as NOT_SET
+::  to skip this step, leave domain as NOT_SET
 :: SET NETDOM_DOMAIN=NOT_SET
 SET NETDOM_DOMAIN=
 SET NETDOM_USERD=
-::	To be prompted for password
-::	SET NETDOM_PASSWORDD=*
+::  To be prompted for password
+::  SET NETDOM_PASSWORDD=*
 SET NETDOM_PASSWORDD=
 SET NETDOM_USERD_PW_FILE=Domain_Join_Password.txt
 SET NETDOM_REBOOT=30
@@ -114,22 +115,22 @@ SET NETDOM_REBOOT=30
 SET AD_NETLOGON=
 
 :: Chocolatey
-::	Universal as default
+::  Universal as default
 SET CHOCO_META_PACKAGE=Universal
-::	location & name
+::  location & name
 SET CHOCO_PACKAGE_LIST_LOCATION=%POST_FLIGHT_DIR%
 SET CHOCO_PACKAGE_LIST_FILE=Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt
-::	DEFAULT LOCATION FOR Chocolatey is %PROGRAMDATA%\chocolatey
+::  DEFAULT LOCATION FOR Chocolatey is %PROGRAMDATA%\chocolatey
 SET CHOCO_LOCATION=%PROGRAMDATA%\chocolatey
 
 :: Ultimate Commandlet configurations
-::	%ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%
+::  %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%
 SET "ULTIMATE_FILE_LOCATION=%POST_FLIGHT_DIR%"
 SET ULTIMATE_FILE_NAME=
 
 
 :: Log Files Settings
-::	Main script log file
+::  Main script log file
 :: %LOG_LOCATION%\%LOG_FILE%
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
 SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
@@ -159,23 +160,23 @@ SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 
 
 :: To cleanup or Not to cleanup, the seed location
-::	0 = OFF (NO)
-::	1= ON (YES)
+::  0 = OFF (NO)
+::  1= ON (YES)
 SET SEED_LOCATION_CLEANUP=1
 
-::	Chocolatey advanced
-::		turn on advanced Chocolatey package assignment based on hostname criteria
-::		each package list must be paired with criteria_Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt file 
-::		i.e. criteria_Chocolatey_Universal_Packages.txt
-::	0 = OFF (NO)
-::	1= ON (YES)
+:: Chocolatey advanced
+::  turn on advanced Chocolatey package assignment based on hostname criteria
+::  each package list must be paired with criteria_Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt file 
+::   i.e. criteria_Chocolatey_Universal_Packages.txt
+::   0 = OFF (NO)
+::   1= ON (YES)
 SET CHOCOLATEY_ADVANCED=1
-::	the list should be in a hierchical order
-::		once a match is found  it will be applied
+::  the list should be in a hierchical order
+::  once a match is found  it will be applied
 SET "CHOCO_META_PACKAGE_LIST=Universal"
 
 :: LOGGING LEVEL CONTROL
-::	by default, ALL=0 & TRACE=0
+::  by default, ALL=0 & TRACE=0
 SET LOG_LEVEL_ALL=0
 SET LOG_LEVEL_INFO=1
 SET LOG_LEVEL_WARN=1
@@ -185,16 +186,16 @@ SET LOG_LEVEL_DEBUG=0
 SET LOG_LEVEL_TRACE=0
 
 :: PROCESS CHECK
-::	(possible future expansion)
-::	check against this number of actions
-::		default is 6
-::	{(1)Disk Configuration; (2)Hostname change; (3)Local Administrator; (4)Join a domain; (5)run Chocolatey, (6)run Ultimate script}
+::  (possible future expansion)
+::  check against this number of actions
+::   default is 6
+::   {(1)Disk Configuration; (2)Hostname change; (3)Local Administrator; (4)Join a domain; (5)run Chocolatey, (6)run Ultimate script}
 SET PROCESS_CHECK_NUMBER=6
 
 
 :: RSAT (Remote Server Administration Tools) [NETDOM]
-::	Windows Main Download Page
-::		https://www.microsoft.com/en-us/download/confirmation.aspx?id=45520&6B49FDFB-8E5B-4B07-BC31-15695C5A2143=1
+::  Windows Main Download Page
+::   https://www.microsoft.com/en-us/download/confirmation.aspx?id=45520&6B49FDFB-8E5B-4B07-BC31-15695C5A2143=1
 SET RSAT_PACKAGE_W10x64=WindowsTH-RSAT_WS_1709-x64.msu
 SET RSAT_ATTEMPT=0
 
@@ -227,6 +228,21 @@ REM EXAMPLE: FOR /F %%R IN ('ECHO %VARIABLE%') DO SET VARIABLE=%%R
 ::  FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"variable" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "variable=%%V"
 ::   WPF_CONFIG_SCHEMA_VERSION
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"WPF_CONFIG_SCHEMA_VERSION" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "WPF_CONFIG_SCHEMA_VERSION=%%V"
+:: CHECK the Config file Schema version meets the minimum requirement
+SET CONFIG_FILE_SCHEMA_CHECK=0
+::  Parse schema version from configuration file
+FOR /F "tokens=1 delims=." %%V IN ("%WPF_CONFIG_SCHEMA_VERSION%") DO SET WPF_CONFIG_SCHEMA_VERSION_MAJOR=%%V
+FOR /F "tokens=2 delims=." %%V IN ("%WPF_CONFIG_SCHEMA_VERSION%") DO SET WPF_CONFIG_SCHEMA_VERSION_MINOR=%%V
+::  Parse schema version from minimum
+FOR /F "tokens=1 delims=." %%V IN ("%WPF_CONFIG_SCHEMA_VERSION_MIN%") DO SET WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR=%%V
+FOR /F "tokens=2 delims=." %%V IN ("%WPF_CONFIG_SCHEMA_VERSION_MIN%") DO SET WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR=%%V
+::  actual check
+IF %WPF_CONFIG_SCHEMA_VERSION_MAJOR% GEQ %WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR% (SET CONFIG_FILE_SCHEMA_CHECK=1) ELSE (GoTo err03)
+IF %CONFIG_FILE_SCHEMA_CHECK% EQU 1 GoTo skipSC
+IF %WPF_CONFIG_SCHEMA_VERSION_MINOR% GEQ %WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR% (SET CONFIG_FILE_SCHEMA_CHECK=1) ELSE (
+     ECHO The configuration file [%CONFIG_FILE_NAME%] is using an older schema, and doesn't meet the minimum requirement!)
+IF %CONFIG_FILE_SCHEMA_CHECK% EQU 0 ECHO Minimum MINOR schema version not met. Will proceed anyway!
+:skipSC
 ::   POST_FLIGHT_DIR
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"POST_FLIGHT_DIR" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "POST_FLIGHT_DIR=%%V"
 FOR /F %%R IN ('ECHO %POST_FLIGHT_DIR%') DO SET POST_FLIGHT_DIR=%%R
@@ -380,6 +396,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATIO
 IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
 ECHO [DEBUG]	VARIABLE: CONFIG_FILE_NAME set to %CONFIG_FILE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION set to %WPF_CONFIG_SCHEMA_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: CONFIG_FILE_SCHEMA_CHECK set to %CONFIG_FILE_SCHEMA_CHECK% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MAJOR set to %WPF_CONFIG_SCHEMA_VERSION_MAJOR% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MINOR set to %WPF_CONFIG_SCHEMA_VERSION_MINOR% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR set to %WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR set to %WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: LOG_LOCATION set to %LOG_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: LOG_FILE set to %LOG_FILE% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO [DEBUG]	VARIABLE: POST_FLIGHT_DIR set to %POST_FLIGHT_DIR% >> %LOG_LOCATION%\%LOG_FILE%
@@ -423,7 +444,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION
 ::  get the console user
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	ENTER: Console user sub-routine!) >> %LOG_LOCATION%\%LOG_FILE%
 QUERY SESSION > %LOG_LOCATION%\var_CONSOLE_USER.txt
-FOR /F "usebackq skip=2 tokens=2 delims= " %%U IN ("%LOG_LOCATION%\var_CONSOLE_USER.txt") DO SET CONSOLE_USER=%%U
+FOR /F "tokens=2 delims= " %%U IN ('FIND /I "console" %LOG_LOCATION%\var_CONSOLE_USER.txt') DO SET CONSOLE_USER=%%U
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Console user is [%CONSOLE_USER%]! >> %LOG_LOCATION%\%LOG_FILE% 
 IF EXIST %LOG_LOCATION%\var_CONSOLE_USER.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_CONSOLE_USER.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE% 
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Console user [%CONSOLE_USER%] is the same as DEFAULT_USER [%DEFAULT_USER%], logoff will occur at the end!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -641,14 +662,13 @@ IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%S
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_USERD%@%NETDOM_DOMAIN% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /IT /SC ONSTART /DELAY 0001:00 /RL HIGHEST /F
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Set that the Task scheduler for domain account is rebooting
-ECHO 1 > %LOG_LOCATION%\var_TS_D_REBOOT.txt
+ECHO 1> %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE%
-SET /P TS_D_REBOOT= < %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
-:: Computer should be in a reboot cycle
-GoTo feTime
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
+:: Computer should reboot to run as a domain user
+(shutdown /r /t 30) & (GoTo feTime)
 
 :skipSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Skip for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -848,8 +868,8 @@ IF %ERRORLEVEL% EQU 0 ECHO %DATE% %TIME% Joined [%NETDOM_DOMAIN%] domain >> %LOG
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Joined [%NETDOM_DOMAIN%] domain!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%LOG_FILE%
-:: Going to setup Task Scheduler with a domain account for WPF
-GoTo stepSTD
+:: Going to function end time since computer is rebooting
+GoTo fSTD
 
 :skip4
 :: Skip 4 means the computer has already been joined to the domain
@@ -1184,7 +1204,7 @@ Color 4E
 ECHO %DATE% %TIME% [FATAL]	FATAL ERROR! NO CONFIGURATION FILE [.\%CONFIG_FILE_NAME%] FOUND! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 ECHO FATAL ERROR!
 ECHO NO CONFIGURATION FILE WAS FOUND
-TIMEOUT 300
+PAUSE
 EXIT 
 
 :err00
@@ -1211,6 +1231,16 @@ IF %LOG_LEVEL_FATAL% EQU 1 ECHO [FATAL]	Aborting %SCRIPT_NAME% due to host file 
 ECHO FATAL ERROR: NO HOST DATABASE FOUND! ABORTING!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: error02 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
+
+:err03
+:: ERROR 03 (Configuration file schema doesn't meet minimum version)
+CLS
+Color 4E
+ECHO %DATE% %TIME% [FATAL]	FATAL ERROR! CONFIGURATION FILE [%CONFIG_FILE_NAME%]  >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
+ECHO FATAL ERROR!
+ECHO CONFIGURATION FILE SCHEMA DOESN'T MEET MINIMUM VERSION!
+PAUSE
+EXIT 
 
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 10's (Local Administrator)
