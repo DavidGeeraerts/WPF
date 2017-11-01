@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.96.0
+SET SCRIPT_VERSION=0.98.2
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=100
 Prompt WPF$G
@@ -60,11 +60,16 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
 
-
 :: Working Directory for Post-Flight
 ::  this is also the (local storage) seed location for Post-Flight
 SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
 SET "POST_FLIGHT_CMD_NAME=Windows_Post-Flight.cmd"
+
+:: Log Files Settings
+::  Main script log file
+:: %LOG_LOCATION%\%LOG_FILE%
+SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
+SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
 
 :: FLASH Drive
 ::  provide the label for the flash drive
@@ -128,12 +133,6 @@ SET CHOCO_LOCATION=%PROGRAMDATA%\chocolatey
 SET "ULTIMATE_FILE_LOCATION=%POST_FLIGHT_DIR%"
 SET ULTIMATE_FILE_NAME=
 
-
-:: Log Files Settings
-::  Main script log file
-:: %LOG_LOCATION%\%LOG_FILE%
-SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
-SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
 
 ::###########################################################################::
 ::            *******************
@@ -374,10 +373,13 @@ whoami > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
 SET /P var_WHOAMI= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
 :: fancy parsing for proper output of info
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
-     FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt)
+systeminfo > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
+IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt (
+     FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
+	 )
 SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_SYSTEMINFO% >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
 ver > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt) DO SET var_VER=%%V
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
@@ -662,9 +664,12 @@ IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%S
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_USERD%@%NETDOM_DOMAIN% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /IT /SC ONSTART /DELAY 0001:00 /RL HIGHEST /F
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%@%NETDOM_DOMAIN%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Set that the Task scheduler for domain account is rebooting
-ECHO 1> %LOG_LOCATION%\var_TS_D_REBOOT.txt
+ECHO 1 > %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE%
+SET /P TS_D_REBOOT= < %LOG_LOCATION%\var_TS_D_REBOOT.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer should reboot to run as a domain user
@@ -852,10 +857,15 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap4.1 >> %LOG_LOCATION%\%LOG_FI
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDOMAIN%" GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDNSDOMAIN%" GoTo skip4
+:: Check the current domain association
+FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Current domain association is [%DOMAIN_ASSOCIATION%] >> %LOG_LOCATION%\%LOG_FILE%
+IF /I "%NETDOM_DOMAIN%"=="%DOMAIN_ASSOCIATION%" GoTo skip4
 IF %NETDOM_PRESENCE% EQU 0 GoTo err01
 :: Check to make sure computer can communicate with Windows domain
 ::  DNS is required
 NSLOOKUP %NETDOM_DOMAIN% | FIND "Name" || GoTo err42
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap4.1 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo fdomain
 
 :fdomain
@@ -874,8 +884,8 @@ GoTo fSTD
 :skip4
 :: Skip 4 means the computer has already been joined to the domain
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: skip4 >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% %COMPUTERNAME% has already been joined to the domain [%USERDOMAIN%]! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%COMPUTERNAME% has already been joined to the domain [%USERDOMAIN%]! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% %COMPUTERNAME% has already been joined to the domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%COMPUTERNAME% has already been joined to the domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1145,6 +1155,14 @@ IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
      IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
 	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
 IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+::  systeminfo file
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
+     IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
+	      TYPE %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%))
+IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
+IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
 :: Process Registry Sub-Routine
 GoTo subr4
@@ -1166,8 +1184,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Ending for complete >> %LOG_LOCAT
 :: 	the following var_files get created each time the commandlet runs 
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt)
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt)
+
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt DEL /F /Q %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt DEL /F /Q %LOG_LOCATION%\var_TS_D_REBOOT.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_CONSOLE_USER.txt DEL /F /Q %LOG_LOCATION%\var_CONSOLE_USER.txt)
