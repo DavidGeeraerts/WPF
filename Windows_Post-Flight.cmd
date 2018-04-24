@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.109.0
+SET SCRIPT_VERSION=0.110.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -1210,13 +1210,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Task Scheduler cleanup! >> %LOG_LO
 :: ending when complete (this is a jump spot for err100 --when everything is already done).
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Ending for complete >> %LOG_LOCATION%\%LOG_FILE%
 :: 	the following var_files get created each time the commandlet runs 
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt DEL /F /Q %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt DEL /F /Q %LOG_LOCATION%\var_TS_D_REBOOT.txt)
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_CONSOLE_USER.txt DEL /F /Q %LOG_LOCATION%\var_CONSOLE_USER.txt)
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (DEL /F /Q %LOG_LOCATION%\var_*.txt)
 dir /B %LOG_LOCATION% | FIND /I "var_" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	All the var_ files have been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
