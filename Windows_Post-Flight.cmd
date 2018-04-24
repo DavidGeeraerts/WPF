@@ -32,9 +32,10 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.98.2
+SET SCRIPT_VERSION=0.107.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=100
+mode con:cols=80
+mode con:lines=50
 Prompt WPF$G
 color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -141,17 +142,17 @@ SET ULTIMATE_FILE_NAME=
 ::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
-SET PROCESS_1_FILE_NAME=RUN_Administrator_configured_%SCRIPT_VERSION%.txt
+SET PROCESS_1_FILE_NAME=RAN_Administrator_configured_%SCRIPT_VERSION%.txt
 :: Process 2: Process Disk condifuration
-SET PROCESS_2_FILE_NAME=RUN_DiskPart_%SCRIPT_VERSION%.txt
+SET PROCESS_2_FILE_NAME=RAN_DiskPart_%SCRIPT_VERSION%.txt
 :: Process 3: Change the hostname
-SET PROCESS_3_FILE_NAME=RUN_Hostname_Changed_%SCRIPT_VERSION%.txt
+SET PROCESS_3_FILE_NAME=RAN_Hostname_Changed_%SCRIPT_VERSION%.txt
 :: Process 4: Join a Windows Domain
-SET PROCESS_4_FILE_NAME=RUN_Domain_Joined_%SCRIPT_VERSION%.txt
+SET PROCESS_4_FILE_NAME=RAN_Domain_Joined_%SCRIPT_VERSION%.txt
 :: Process 5: Run Chocolatey
-SET PROCESS_5_FILE_NAME=RUN_Chocolatey_%SCRIPT_VERSION%.txt
+SET PROCESS_5_FILE_NAME=RAN_Chocolatey_%SCRIPT_VERSION%.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=RUN_Ultimate_%SCRIPT_VERSION%.txt
+SET PROCESS_6_FILE_NAME=RAN_Ultimate_%SCRIPT_VERSION%.txt
 
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%_%SCRIPT_VERSION%.log
@@ -366,6 +367,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	EXIT: function start time for lapse tim
 :start
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	ENTER: function Start!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	START %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt (
+	FOR /F "tokens=2-3 delims=(" %S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%S^(%T > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
+	)
+SET /P var_TimeZone= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO] %var_TimeZone%
 ECHO Logs can be found here: %LOG_LOCATION%
 ECHO Log file for WPF: %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
@@ -373,7 +379,8 @@ whoami > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
 SET /P var_WHOAMI= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
 :: fancy parsing for proper output of info
-systeminfo > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
+IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt systeminfo > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
+
 IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt (
      FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
 	 )
@@ -501,6 +508,7 @@ IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to updat
 :jump3
 
 ::	(4) NETDOM
+::		Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
 ::	not present until proven otherwise
 Echo Checking for NETDOM presence...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: checking if NETDOM is present. >> %LOG_LOCATION%\%LOG_FILE%
@@ -570,7 +578,7 @@ GoTo autoSU
 
 :installRSAT
 ::	(8) Try and fix NETDOM DEPENDENCY
-::	will try and insatll Remote Server Administration Tools (NETDOM) from Flash drive
+::	will try and install Remote Server Administration Tools (NETDOM) from seed location or flash drive if present
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Dependency Check: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
 IF %RSAT_ATTEMPT% EQU 1 GoTo err01
@@ -585,25 +593,26 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Trying to install:[%NETDOM_INSTALL%]... >>
 ECHO Installing NETDOM with this installer [%NETDOM_INSTALL%]...
 ECHO (Computer will reboot after instalation!)
 SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT_ATTEMPT just got set to [%RSAT_ATTEMPT%]! >> %LOG_LOCATION%\%LOG_FILE%
-ECHO. >> %LOG_LOCATION%\%LOG_FILE%
 "%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet
+SET RSAT_INSTALL_ERRORLEVEL=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT installer return code: %RSAT_INSTALL_ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
 :: Wait for RSAT Rebooting
-TIMEOUT 15
+::IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
+:: TIMEOUT 15
 :: Computer should be rebooting now so that RSAT can configure properly
-::  will never reach here if everything worked correctly
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT installer return code: %ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
+::  will never reach here if everything worked correctly unless RSAT doesn't initiate a reboot
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT-Remote Server Administration Tools [%NETDOM_INSTALL%] [NETDOM] attempted to install! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]]	Checking for NETDOM presence... >> %LOG_LOCATION%\%LOG_FILE%
+IF %RSAT_INSTALL_ERRORLEVEL% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	RSAT-Remote Server Administration Tools [NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %RSAT_INSTALL_ERRORLEVEL% GEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	RSAT [%NETDOM_INSTALL%] installation failed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Checking for NETDOM presence... >> %LOG_LOCATION%\%LOG_FILE%
 dir %SYSTEMROOT%\System32 | FIND /I "netdom.exe" && SET NETDOM_PRESENCE=1
 IF %NETDOM_PRESENCE% EQU 0 DIR %SYSTEMROOT%\SysWOW64 | FIND /I "netdom.exe" && SET NETDOM_PRESENCE=1
 IF EXIST %SYSTEMROOT%\SysWOW64\netdom.exe SET "PATH=%PATH%;%SYSTEMROOT%\SysWOW64"
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	RSAT [%NETDOM_INSTALL%] installation failed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR] NETDOM is still NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	NETDOM is now present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Dependency Check: for Remote Server Administrative Tools [NETDOM] >> %LOG_LOCATION%\%LOG_FILE%
-GoTo trap31
+GoTo autoSU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
@@ -614,8 +623,8 @@ GoTo trap31
 :autoSU
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Decide where to go
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% GoTo start
-IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo start
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% GoTo startS
+IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo startS
 SCHTASKS /Query /TN "%SCRIPT_NAME%" && IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo stepSTD
 SCHTASKS /Query /TN "%SCRIPT_NAME%" || GoTo stepSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -634,16 +643,20 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap for Local computer Scheduled 
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 REM Setting /SC to ONLOGON did not work correctly. Works better with ONSTART
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU Administrator /RP %ADMIN_PASSWORD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /HRESULT /F
-IF %ERRORLEVEL% EQU 0 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] successfully created!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ERRORLEVEL% EQU 0 (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task local for [%SCRIPT_NAME%] successfully created!
+	 ) ELSE (
+	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Scheduled Task local for [%SCRIPT_NAME%] FAILED!
+	 ) >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-GoTo start
+GoTo startS
 
 :skipSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Skip for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] already exists! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Skip for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-GoTo start
+GoTo startS
 
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -662,14 +675,22 @@ IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%S
 
 :fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_USERD%@%NETDOM_DOMAIN% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /IT /SC ONSTART /DELAY 0001:00 /RL HIGHEST /F
+SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_USERD% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /IT /SC ONSTART /DELAY 0001:00 /RL HIGHEST /F
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
-FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%@%NETDOM_DOMAIN%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
+FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
+:: If setting the domain account for the scheduled task fails resort back to STL
+FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
 
 :: Set that the Task scheduler for domain account is rebooting
-ECHO 1 > %LOG_LOCATION%\var_TS_D_REBOOT.txt
-IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!) >> %LOG_LOCATION%\%LOG_FILE%
-SET /P TS_D_REBOOT= < %LOG_LOCATION%\var_TS_D_REBOOT.txt
+IF NOT EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (
+     SET TS_D_REBOOT=1
+     ) && (
+	 ECHO %TS_D_REBOOT% > %LOG_LOCATION%\var_TS_D_REBOOT.txt
+     ) && (
+     IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (
+	      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!
+     )) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SET /P TS_D_REBOOT= < %LOG_LOCATION%\var_TS_D_REBOOT.txt) && SET /A "TS_D_REBOOT=TS_D_REBOOT+1"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer should reboot to run as a domain user
@@ -678,13 +699,13 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Sched
 :skipSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Skip for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] already exists! >> %LOG_LOCATION%\%LOG_FILE%
-GoTo start
+GoTo startS
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
 ::*****************************************************************************
-:start
+:startS
 :: start processing
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Processing entered! >> %LOG_LOCATION%\%LOG_FILE%
 
@@ -707,7 +728,7 @@ SET LOCAL_ADMINISTRATOR_STATUS=0
 NET USER Administrator && SET LOCAL_ADMINISTRATOR_STATUS=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
 NET USER Administrator %ADMIN_PASSWORD% /ACTIVE:YES || SET LOCAL_ADMINISTRATOR_STATUS=0
-IF %LOG_LEVEL_DEBUG% EQU 0 ECHO [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOCAL_ADMINISTRATOR_STATUS% EQU 1 ECHO %DATE% %TIME% Local Administrator account configured/Re-configured! >> %LOG_LOCATION%\%PROCESS_1_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Local Administrator account configured/Re-configured!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% ECHO Local Administrator account configured/Re-configured!
@@ -792,7 +813,7 @@ GoTo trap31
 :trap31
 :: Trap to catch if NETDOM is present or not
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_ATTEMPT% GEQ 1 GoTo err01
+IF %RSAT_ATTEMPT% GEQ 2 GoTo err01
 IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
 GoTo fhost
 
@@ -836,7 +857,7 @@ GoTo step4
 
 :://///////////////////////////////////////////////////////////////////////////
 :step4
-:: Joins the computer to a Domain if choosen to do so
+:: Joins the computer to a Domain if chosen to do so
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step4 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO STEP 4: Working on joining the computer to a Windows Domain network...
 
@@ -879,7 +900,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [I
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%LOG_FILE%
 :: Going to function end time since computer is rebooting
-GoTo fSTD
+GoTo feTime
 
 :skip4
 :: Skip 4 means the computer has already been joined to the domain
@@ -922,6 +943,7 @@ SET /P CHOCO_PACKAGE_RUN= < %CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FI
 
 :: FUNCTION RUN Chocolatey
 ECHO %DATE% %TIME% %var_CHOCOLATEY% is running... >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Working on Chocolatey package management... >> %LOG_LOCATION%\%LOG_FILE%
 Choco upgrade %CHOCO_PACKAGE_RUN% /Y
 ECHO %DATE% %TIME%: %var_CHOCOLATEY% ran this package list [%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%]! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 Choco LIST --Local-Only >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
@@ -1163,6 +1185,11 @@ IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt DEL /F
 IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
+	IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt)
+IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	File [var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
 :: Process Registry Sub-Routine
 GoTo subr4
@@ -1186,7 +1213,6 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SC
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt)
-
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt DEL /F /Q %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt DEL /F /Q %LOG_LOCATION%\var_TS_D_REBOOT.txt)
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\var_CONSOLE_USER.txt DEL /F /Q %LOG_LOCATION%\var_CONSOLE_USER.txt)
@@ -1439,6 +1465,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LO
 IF %LOG_LEVEL_INFO% EQU 1 Echo [INFO]	END %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
 ENDLOCAL
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
 TIMEOUT 30
