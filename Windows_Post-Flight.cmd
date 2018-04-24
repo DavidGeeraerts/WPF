@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.107.0
+SET SCRIPT_VERSION=0.109.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -368,10 +368,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	EXIT: function start time for lapse tim
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO [TRACE]	ENTER: function Start!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	START %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt (
-	FOR /F "tokens=2-3 delims=(" %S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%S^(%T > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
+	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
 	)
 SET /P var_TimeZone= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO] %var_TimeZone%
+::	var_TimeZone has to be quoted for output due to "&" special character
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO] "%var_TimeZone%" >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Logs can be found here: %LOG_LOCATION%
 ECHO Log file for WPF: %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
