@@ -1,1 +1,1 @@
-chocolatey 7Zip firefox googlechrome googleearth irfanview notepadplusplus sumatrapdf vlc
+chocolatey 7Zip firefox googlechrome googleearthpro irfanview notepadplusplus sumatrapdf vlc

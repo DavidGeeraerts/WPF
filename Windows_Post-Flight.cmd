@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=0.111.0
+SET SCRIPT_VERSION=1.0.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -196,7 +196,7 @@ SET PROCESS_CHECK_NUMBER=6
 :: RSAT (Remote Server Administration Tools) [NETDOM]
 ::  Windows Main Download Page
 ::   https://www.microsoft.com/en-us/download/confirmation.aspx?id=45520&6B49FDFB-8E5B-4B07-BC31-15695C5A2143=1
-SET RSAT_PACKAGE_W10x64=WindowsTH-RSAT_WS_1803-x64.msu
+SET RSAT_PACKAGE_W10x64=WindowsTH-RSAT_WS_1709-x64.msu
 SET RSAT_ATTEMPT=0
 
 :: Miscellaneous
@@ -595,7 +595,7 @@ ECHO Installing NETDOM with this installer [%NETDOM_INSTALL%]...
 ECHO (Computer will reboot after instalation!)
 SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT_ATTEMPT just got set to [%RSAT_ATTEMPT%]! >> %LOG_LOCATION%\%LOG_FILE%
-"%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet /forcerestart
+"%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet /norestart
 SET RSAT_INSTALL_ERRORLEVEL=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	RSAT installer return code: %RSAT_INSTALL_ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
 :: Wait for RSAT Rebooting
@@ -645,9 +645,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Local computer Sched
 REM Setting /SC to ONLOGON did not work correctly. Works better with ONSTART
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU Administrator /RP %ADMIN_PASSWORD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /HRESULT /F
 IF %ERRORLEVEL% EQU 0 (
-     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task local for [%SCRIPT_NAME%] successfully created!
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task local for [%SCRIPT_NAME%] successfully created! >> %LOG_LOCATION%\%LOG_FILE%
 	 ) ELSE (
-	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Scheduled Task local for [%SCRIPT_NAME%] FAILED!
+	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Scheduled Task local for [%SCRIPT_NAME%] FAILED! >> %LOG_LOCATION%\%LOG_FILE%
 	 ) >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -672,7 +672,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap for Domain computer Schedule
 SCHTASKS /Query /TN "%SCRIPT_NAME%" || IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] doesn't already exist, and was expected! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo skipSTD
 IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" || GoTo fSTD
-
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 
 :fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -680,7 +680,8 @@ SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_DOMA
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
 :: If setting the domain account for the scheduled task fails resort back to STL
-FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
+:: This is failing and skipping the reboot
+:: FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
 
 :: Set that the Task scheduler for domain account is rebooting
 IF NOT EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (
@@ -695,7 +696,7 @@ IF EXIST %LOG_LOCATION%\var_TS_D_REBOOT.txt (SET /P TS_D_REBOOT= < %LOG_LOCATION
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer should reboot to run as a domain user
-(shutdown /r /t 30) & (GoTo feTime)
+(shutdown /r /t 15) & (GoTo feTime)
 
 :skipSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Skip for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -900,6 +901,19 @@ IF %ERRORLEVEL% EQU 0 ECHO %DATE% %TIME% Joined [%NETDOM_DOMAIN%] domain >> %LOG
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Joined [%NETDOM_DOMAIN%] domain!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%LOG_FILE%
+
+
+:: Need to reset the scheduled task after joining a domain otherwise the Task will not run
+:: See if this fixes the scheduled task bug
+::		this fixed this issue.
+SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %COMPUTERNAME%\Administrator /RP %ADMIN_PASSWORD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /HRESULT /F
+IF %ERRORLEVEL% EQU 0 (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task local for [%SCRIPT_NAME%] successfully created!
+	 ) ELSE (
+	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Scheduled Task local for [%SCRIPT_NAME%] FAILED!
+	 ) >> %LOG_LOCATION%\%LOG_FILE%
+SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+::::
 :: Going to function end time since computer is rebooting
 GoTo feTime
 
@@ -1222,7 +1236,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: SEED cleanup >> %LOG_LOCATION%\%L
 IF %SEED_LOCATION_CLEANUP% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Leaving SEED LOCATION contents!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	SEED_LOCATION_CLEANUP is set to: %SEED_LOCATION_CLEANUP% >> %LOG_LOCATION%\%LOG_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Cleaning up SEED LOCATION [%POST_FLIGHT_DIR%], but leaving logs) >> %LOG_LOCATION%\%LOG_FILE%
-IF %SEED_LOCATION_CLEANUP% EQU 1 (ROBOCOPY %POST_FLIGHT_DIR% %POST_FLIGHT_DIR%\TOBEDELETED *.* /S /E /MOVE /R:1 /W:2 /XD Logs TOBEDELETED)
+IF %SEED_LOCATION_CLEANUP% EQU 1 (ROBOCOPY %POST_FLIGHT_DIR% %POST_FLIGHT_DIR%\TOBEDELETED *.* /S /E /MOVE /R:1 /W:2 /XF %SCRIPT_NAME%.cmd /XD Logs TOBEDELETED)
 IF EXIST %POST_FLIGHT_DIR%\TOBEDELETED RD /S /Q %POST_FLIGHT_DIR%\TOBEDELETED
 IF %SEED_LOCATION_CLEANUP% EQU 1 (IF NOT EXIST %POST_FLIGHT_DIR%\TOBEDELETED (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	SEED LOCATION [%POST_FLIGHT_DIR%] has been cleaned up!)) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%

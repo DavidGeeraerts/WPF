@@ -1,5 +1,4 @@
-Alpha development just about done.
-Beta development in progress.
+First official release version 1.0.0
 
 
 No [Full] Documentation yet!
