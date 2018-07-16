@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=1.0.0
+SET SCRIPT_VERSION=1.1.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -372,7 +372,7 @@ IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZo
 	)
 SET /P var_TimeZone= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
 ::	var_TimeZone has to be quoted for output due to "&" special character
-IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO] "%var_TimeZone%" >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	"%var_TimeZone%" >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Logs can be found here: %LOG_LOCATION%
 ECHO Log file for WPF: %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
@@ -716,7 +716,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: Processing entered! >> %LOG_LOCAT
 :: Configures the local administrator account
 ::  Do this before joining the domain in order to ensure not getting locked out withouth admin priveleges
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step1 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO STEP 1: Working on setting up local administrator...
+ECHO Step 1: Working on setting up local administrator...
 
 :trap1
 :: TRAP 1 to catch if the local administrator has already been configured
@@ -751,7 +751,7 @@ GoTo step2
 :step2
 :: Process DiskPart to configure hard drive
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step2 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO STEP 2: Working on computer disk configuration...
+ECHO Step 2: Working on computer disk configuration...
 
 :trap2
 :: TRAP 2 to catch if diskpart has already run
@@ -767,7 +767,7 @@ DISKPART /s %POST_FLIGHT_DIR%\%DISKPART_COMMAND_FILE% >> %LOG_LOCATION%\%PROCESS
 SET DISKPART_ERROR=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[DISKPART_ERROR] set to [%DISKPART_ERROR%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %DISKPART_ERROR% GTR 0 GoTo err20
-IF %DISKPART_ERROR% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Diskpart completed successfully!) ELSE (
+IF %DISKPART_ERROR% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Diskpart completed successfully! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
      IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Diskpart threw an error [%DISKPART_ERROR%]! Check disk configuration!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %DISKPART_ERROR% LSS 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Since the diskpart error [%DISKPART_ERROR%] is a negative number, most likely diskpart completed successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE% %TIME% DISKPART finnished! >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
@@ -861,7 +861,7 @@ GoTo step4
 :step4
 :: Joins the computer to a Domain if chosen to do so
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step4 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO STEP 4: Working on joining the computer to a Windows Domain network...
+ECHO Step 4: Working on joining the computer to a Windows Domain network...
 
 :trap4
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: trap4 >> %LOG_LOCATION%\%LOG_FILE%
@@ -902,10 +902,27 @@ IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO [I
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%LOG_FILE%
 
+:: Adds the domain account used to join domain into local administrators group
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER Sub-Function Adding Domain User into Local Administrators Group >> %LOG_LOCATION%\%LOG_FILE%
+NET LOCALGROUP Administrators %NETDOM_DOMAIN%\%NETDOM_USERD% /ADD
+SET DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	[DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL] equals %DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
+IF %DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL% EQU 0 (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO [INFO]	Domain user [%NETDOM_USERD%] was just added to the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	)
+IF %DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL% EQU 2 (
+	IF %LOG_LEVEL_WARN% EQU 1 ECHO [WARN]	Domain User [%NETDOM_USERD%] was already in the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	)
+IF %DOMAINUSER_LOCALGROUP_ADD_ERRORLEVEL% EQU 1 (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Domain User [%NETDOM_USERD%] could not be added to the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT Sub-Function Adding Domain User into Local Administrators Group >> %LOG_LOCATION%\%LOG_FILE%
+
 
 :: Need to reset the scheduled task after joining a domain otherwise the Task will not run
 :: See if this fixes the scheduled task bug
 ::		this fixed this issue.
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER Sub-Function Resetting Scheduled Task after domain join! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %COMPUTERNAME%\Administrator /RP %ADMIN_PASSWORD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /HRESULT /F
 IF %ERRORLEVEL% EQU 0 (
      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO [DEBUG]	Scheduled Task local for [%SCRIPT_NAME%] successfully created!
@@ -913,6 +930,7 @@ IF %ERRORLEVEL% EQU 0 (
 	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO [ERROR]	Scheduled Task local for [%SCRIPT_NAME%] FAILED!
 	 ) >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	EXIT Sub-Function Resetting Scheduled Task after domain join! >> %LOG_LOCATION%\%LOG_FILE%
 ::::
 :: Going to function end time since computer is rebooting
 GoTo feTime
@@ -929,7 +947,7 @@ GoTo step5
 :step5
 :: Will process a chocolatey script. Recommend running 'upgrade'
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step5 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO STEP 5: Working on Chocolatey package management...
+ECHO Step 5: Working on Chocolatey package management...
 
 :trap5
 :: TRAP 5 to catch if Chocolatey has already run
@@ -977,7 +995,7 @@ GoTo step6
 :: Process Ultimate script file {cleaning, configurations, etc}
 ::	Author uses Sorcerer's Apprentice as ultimate script file
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO [TRACE]	ENTER: step6 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO STEP 6: Working on processing the Ultimate Commandlet...
+ECHO Step 6: Working on processing the Ultimate Commandlet...
 
 :trap6
 :: TRAP6 is to catch if the Ultimat file has been processed
