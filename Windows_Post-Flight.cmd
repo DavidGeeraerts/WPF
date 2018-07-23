@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=1.4.5
+SET SCRIPT_VERSION=1.5.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -100,25 +100,6 @@ SET LOCAL_ADMIN_PW_FILE=Local_Administrator_Password.txt
 ::  assumes it will be in the working directory
 SET DISKPART_COMMAND_FILE=DiskPart_Hard_Drive_Config.txt
 
-
-:: NETDOM CONFIGURATION
-::  to skip this step, leave domain as NOT_SET
-:: SET NETDOM_DOMAIN=NOT_SET
-SET NETDOM_DOMAIN=
-SET NETDOM_USERD=
-::  To be prompted for password
-::  SET NETDOM_PASSWORDD=*
-SET NETDOM_PASSWORDD=
-SET NETDOM_USERD_PW_FILE=Domain_Join_Password.txt
-SET NETDOM_REBOOT=30
-:: Future use
-:: Not currently used
-:: SET NETDOM_USERO=
-:: SET NETDOM_PASSWORDO=
-:: SET NETDOM_OU=
-
-:: Windows Network AD NETLOGON
-SET AD_NETLOGON=
 
 :: Chocolatey
 ::  Universal as default
@@ -395,10 +376,19 @@ IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName
 	 )
 SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
 SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
+
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
 ver > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt) DO SET var_VER=%%V
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
+:: Get Windows version (Based on release ID --more relevant for Windows 10)
+FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO ECHO %%R > %LOG_LOCATION%\var_Windows_Version.txt
+SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var_Windows_Version.txt
+VER | FIND /I "Version 10." && (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Windows 10 version: %var_WINDOWS_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+	)
+
+
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Log level ALL is [%LOG_LEVEL_ALL%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	Log level INFO is [%LOG_LEVEL_INFO%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Log level WARN is [%LOG_LEVEL_WARN%] >> %LOG_LOCATION%\%LOG_FILE%
@@ -553,6 +543,7 @@ IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	NETDOM 
 IF %NETDOM_PRESENCE% EQU 0 ECHO NETDOM is NOT present!
 IF %NETDOM_PRESENCE% EQU 1 ECHO NETDOM is present!
 
+
 ::	(6) Password Files
 Echo Checking for password files...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
@@ -568,46 +559,8 @@ IF "%NETDOM_PASSWORDD%"=="*" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [DEBUG]	User
 IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Domain Join User Password file [%NETDOM_USERD_PW_FILE%] not found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% ECHO Domain join user password file [%NETDOM_USERD_PW_FILE%] not found!
 
-::	(7) Chocolatey
-Echo Checking for Chocolatey...
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: checking if Chocolatey is present? >> %LOG_LOCATION%\%LOG_FILE%
-::	not present until proven otherwise
-SET CHOCO_PRESENCE=0
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED ChocolateyInstall SET CHOCO_PRESENCE=1
-IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists!) ELSE (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %ChocolateyInstall%\choco.exe SET /A "CHOCO_PRESENCE=CHOCO_PRESENCE-1"
-IF NOT EXIST %ChocolateyInstall%\choco.exe (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	Chocolatey executable NOT found! It's expected here: %ChocolateyInstall%\choco.exe) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	WPF first time run, check chocolatey after second run when Diskpart has run.) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %ChocolateyInstall%\choco.exe (IF EXIST %LOG_LOCATION%\FirstTimeRun.txt GoTo next8)
-IF EXIST %ChocolateyInstall%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ChocolateyInstall%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ChocolateyInstall%\choco.exe Choco info Chocolatey > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_CHOCOLATEY% is present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% is present!
-IF %CHOCO_PRESENCE% EQU 0 ECHO Chocolatey is NOT present!
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_2_FILE_NAME% (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN] Chocolatey waits for Diskpart to run first. Diskpart has not run yet. Waiting to run Choco on next reboot.
-	) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_2_FILE_NAME% GoTo next8
 
-::	Chocolatey First time install
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install...) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 0 ECHO Attempting first time Chocolatey install...
-::		attempt to install from Sub-Routine
-IF %CHOCO_PRESENCE% EQU 0 GoTo subr1
-:jump1
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	CHOCOLATEY attempted to install for the first time, but may have FAILED!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %ChocolateyInstall%\choco.exe SET CHOCO_PRESENCE=1
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG] CHOCO_PRESENCE is set to: %CHOCO_PRESENCE% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Dependency Check for Chocolatey. >> %LOG_LOCATION%\%LOG_FILE%
-
-:next8
-::	(8) HOST DATABASE
+::	(7) HOST DATABASE
 Echo Checking for host database...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database found!
@@ -621,7 +574,7 @@ GoTo autoSU
 
 
 :installRSAT
-::	(9) Try and fix NETDOM DEPENDENCY
+::	(8) Try and fix NETDOM DEPENDENCY
 ::	will try and install Remote Server Administration Tools (NETDOM) from seed location or flash drive if present
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
@@ -999,9 +952,45 @@ GoTo step5
 
 :://///////////////////////////////////////////////////////////////////////////
 :step5
-:: Will process a chocolatey script. Recommend running 'upgrade'
+:: Chocolatey Package Management 
+::	script. Recommend running 'upgrade' instead of install for the latest version of an application
+
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: step5 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Step 5: Working on Chocolatey package management...
+
+:: Chocolatey Dependency check
+Echo Checking for Chocolatey...
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: checking if Chocolatey is present? >> %LOG_LOCATION%\%LOG_FILE%
+::	not present until proven otherwise
+SET CHOCO_PRESENCE=0
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ChocolateyInstall SET CHOCO_PRESENCE=1
+IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists!) ELSE (
+	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %ChocolateyInstall%\choco.exe SET /A "CHOCO_PRESENCE=CHOCO_PRESENCE-1"
+IF NOT EXIST %ChocolateyInstall%\choco.exe (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	Chocolatey executable NOT found! It's expected here: %ChocolateyInstall%\choco.exe) >> %LOG_LOCATION%\%LOG_FILE%
+
+IF EXIST %ChocolateyInstall%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF EXIST %ChocolateyInstall%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF EXIST %ChocolateyInstall%\choco.exe Choco info Chocolatey > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_CHOCOLATEY% is present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% is present!
+IF %CHOCO_PRESENCE% EQU 0 ECHO Chocolatey is NOT present!
+
+::	Chocolatey First time install
+IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install...) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 0 ECHO Attempting first time Chocolatey install...
+::		attempt to install from Sub-Routine
+IF %CHOCO_PRESENCE% EQU 0 GoTo subr1
+
+:jump1
+IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	CHOCOLATEY attempted to install for the first time, but may have FAILED!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %ChocolateyInstall%\choco.exe SET CHOCO_PRESENCE=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG] CHOCO_PRESENCE is set to: %CHOCO_PRESENCE% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Dependency Check for Chocolatey. >> %LOG_LOCATION%\%LOG_FILE%
+
 
 :trap5
 :: TRAP 5 to catch if Chocolatey has already run
@@ -1571,7 +1560,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: FUNCTION end time >> %LOG_L
 :EOF
 :: END OF FILE
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\%LOG_FILE%" (IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt) && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [FirstTimeRun.txt] just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [FirstTimeRun.txt] just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	END %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %TIME% END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
