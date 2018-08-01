@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=1.5.0
+SET SCRIPT_VERSION=1.6.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -355,39 +355,38 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %TIME% [TRACE]	ENTER: function Start!) >> %LOG_
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	START %DATE% %TIME% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [FirstTimeRun.txt] was created!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt (
-	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
+IF NOT EXIST %LOG_LOCATION%\var_systeminfo_TimeZone.txt (
+	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > %LOG_LOCATION%\var_systeminfo_TimeZone.txt
 	)
-SET /P var_TimeZone= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt
+SET /P var_TimeZone= < %LOG_LOCATION%\var_systeminfo_TimeZone.txt
 ::	var_TimeZone has to be quoted for output due to "&" special character
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	"%var_TimeZone%" >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Logs can be found here: %LOG_LOCATION%
 ECHO Log file for WPF: %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Minimum config file [%CONFIG_FILE_NAME%] version [%WPF_CONFIG_SCHEMA_VERSION_MIN%] >> %LOG_LOCATION%\%LOG_FILE%
-whoami > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
-SET /P var_WHOAMI= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_whoami.txt
+whoami > %LOG_LOCATION%\var_whoami.txt
+SET /P var_WHOAMI= < %LOG_LOCATION%\var_whoami.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
 :: fancy parsing for proper output of info
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt systeminfo > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
+IF NOT EXIST %LOG_LOCATION%\var_systeminfo.txt systeminfo > %LOG_LOCATION%\var_systeminfo.txt
 
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt (
-     FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
+IF NOT EXIST %LOG_LOCATION%\var_systeminfo_OsName.txt (
+     FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var_systeminfo_OsName.txt
 	 )
-SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
-SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_OsName.txt
+SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var_systeminfo.txt
+SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var_systeminfo_OsName.txt
 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
-ver > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt
-FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_ver.txt) DO SET var_VER=%%V
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get Windows version (Based on release ID --more relevant for Windows 10)
 FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO ECHO %%R > %LOG_LOCATION%\var_Windows_Version.txt
 SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var_Windows_Version.txt
 VER | FIND /I "Version 10." && (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Windows 10 version: %var_WINDOWS_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 	)
-
+ver > %LOG_LOCATION%\var_ver.txt
+FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var_ver.txt) DO SET var_VER=%%V
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
 
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Log level ALL is [%LOG_LEVEL_ALL%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	Log level INFO is [%LOG_LEVEL_INFO%] >> %LOG_LOCATION%\%LOG_FILE%
@@ -518,8 +517,7 @@ IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to updat
 
 ::	(4) Wireless Network Connection
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: Connect to a wireless network? >> %LOG_LOCATION%\%LOG_FILE%
-SET NETDOM_PRESENCE=0
-IF %WIRELESS_CONFIG% EQU 0 GoTo jump4
+IF %WIRELESS_CONFIG% EQU 0 GoTo jump4W
 IF %WIRELESS_CONFIG% EQU 1 (netsh wlan add profile filename=%POST_FLIGHT_DIR%\%WIRELESS_PROFILE_FILENAME% interface=%WIRELESS_CONFIG_INTERFACE% user=all)
 SET WIRELESS_CONNECTION_ERROR=%ERRORLEVEL%
 IF %WIRELESS_CONFIG% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=%WIRELESS_CONFIG_SSID% interface=%WIRELESS_CONFIG_INTERFACE%)
@@ -527,8 +525,7 @@ IF %WIRELESS_CONFIG% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Connected to a wireless network [%WIRELESS_CONFIG_SSID%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_CONNECTION_ERROR% GTR 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	Failed to connect to the wireless network [%WIRELESS_CONFIG_SSID%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Dependency Check: Connect to a wireless network? >> %LOG_LOCATION%\%LOG_FILE%
-:jump4
-
+:jump4W
 
 ::	(5) NETDOM
 ::		Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
@@ -569,12 +566,29 @@ IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]  Host database NOT found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Dependency Check for looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
+
+::	(8) Chocolatey
+Echo Checking for Chocolatey...
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Meta Dependency Check: checking if Chocolatey is present? >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Chocolatey Meta check appears to have already run!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt GoTo jump8
+
+::	Chocolatey First time install
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install..) >> %LOG_LOCATION%\%LOG_FILE%
+ECHO Attempting first time Chocolatey install...
+::		attempt to install from Sub-Routine
+GoTo subr1
+:jump8
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Jump8 >> %LOG_LOCATION%\%LOG_FILE%
+
 :: jump to create a scheduled task
 GoTo autoSU
 
 
 :installRSAT
-::	(8) Try and fix NETDOM DEPENDENCY
+::	(9) Try and fix NETDOM DEPENDENCY
 ::	will try and install Remote Server Administration Tools (NETDOM) from seed location or flash drive if present
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
@@ -887,7 +901,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDOMAIN%" GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDNSDOMAIN%" GoTo skip4
 :: Check the current domain association
-FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
+FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\var_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Current domain association is [%DOMAIN_ASSOCIATION%] >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%NETDOM_DOMAIN%"=="%DOMAIN_ASSOCIATION%" GoTo skip4
 IF %NETDOM_PRESENCE% EQU 0 GoTo err01
@@ -958,47 +972,30 @@ GoTo step5
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: step5 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Step 5: Working on Chocolatey package management...
 
-:: Chocolatey Dependency check
-Echo Checking for Chocolatey...
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: checking if Chocolatey is present? >> %LOG_LOCATION%\%LOG_FILE%
-::	not present until proven otherwise
-SET CHOCO_PRESENCE=0
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED ChocolateyInstall SET CHOCO_PRESENCE=1
-IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists!) ELSE (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %ChocolateyInstall%\choco.exe SET /A "CHOCO_PRESENCE=CHOCO_PRESENCE-1"
-IF NOT EXIST %ChocolateyInstall%\choco.exe (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	Chocolatey executable NOT found! It's expected here: %ChocolateyInstall%\choco.exe) >> %LOG_LOCATION%\%LOG_FILE%
-
-IF EXIST %ChocolateyInstall%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ChocolateyInstall%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ChocolateyInstall%\choco.exe Choco info Chocolatey > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_CHOCOLATEY% is present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% is present!
-IF %CHOCO_PRESENCE% EQU 0 ECHO Chocolatey is NOT present!
-
-::	Chocolatey First time install
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install...) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 0 ECHO Attempting first time Chocolatey install...
-::		attempt to install from Sub-Routine
-IF %CHOCO_PRESENCE% EQU 0 GoTo subr1
-
-:jump1
-IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	CHOCOLATEY attempted to install for the first time, but may have FAILED!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %ChocolateyInstall%\choco.exe SET CHOCO_PRESENCE=1
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG] CHOCO_PRESENCE is set to: %CHOCO_PRESENCE% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Dependency Check for Chocolatey. >> %LOG_LOCATION%\%LOG_FILE%
-
-
 :trap5
 :: TRAP 5 to catch if Chocolatey has already run
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: trap5 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_5_FILE_NAME% GoTo skip5
-IF %CHOCO_PRESENCE% EQU 0 GoTo err50
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: trap5 >> %LOG_LOCATION%\%LOG_FILE%
-GoTo trap51
+
+
+:: Chocolatey pre-processing
+Echo Checking for Chocolatey...
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Dependency Check: checking if Chocolatey is present? >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
+::	not present until proven otherwise
+SET CHOCO_PRESENCE=0
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
+IF DEFINED CHOCO_PRESENCE IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	CHOCO_PRESENCE [%CHOCO_PRESENCE%] >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists!) ELSE (
+	IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_CHOCOLATEY% is present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 0 GoTo err50
+
 
 :trap51
 :: TRAP 5.1 to see if Advanced CHOCOLATEY is turned on
@@ -1082,11 +1079,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Sub-Routine [subr1] Chocol
 ::	Check for updates on Chocolatey webiste for installation:
 ::		https://chocolatey.org/install#install-with-cmdexe
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Sub-Routine [subr1] just installed Chocolatey with exit code: %ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG] PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %ChocolateyInstall%\choco.exe SET CHOCO_PRESENCE=1
-IF EXIST %ChocolateyInstall%\choco.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ChocolateyInstall%\choco.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_CHOCOLATEY% installed for the first time successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	Chocolatey failed to install for the first time!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% installed for the first time successfully!
@@ -1095,7 +1091,7 @@ IF %CHOCO_PRESENCE% EQU 0 ECHO Chocolatey failed to install for the first time!
 :: SETLOCAL DISABLEDELAYEDEXPANSION
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Sub-Routine [subr1] returned CHOCO_PRESENCE:%CHOCO_PRESENCE% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: Sub-Routine [subr1] >> %LOG_LOCATION%\%LOG_FILE%
-GoTo jump1
+GoTo jump8
 
 
 :subr2
@@ -1255,16 +1251,16 @@ IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
 IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 ::  systeminfo file
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
-     IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
-	      TYPE %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%))
-IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt (
-     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+     IF EXIST %LOG_LOCATION%\var_systeminfo.txt (
+	      TYPE %LOG_LOCATION%\var_systeminfo.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%))
+IF EXIST %LOG_LOCATION%\var_systeminfo.txt DEL /F /Q %LOG_LOCATION%\var_systeminfo.txt
+IF NOT EXIST %LOG_LOCATION%\var_systeminfo.txt (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [var_systeminfo.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
-	IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt DEL /F /Q %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt)
-IF NOT EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt (
-     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [var_%SCRIPT_NAME%_%SCRIPT_VERSION%_systeminfo_TimeZone.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+	IF EXIST %LOG_LOCATION%\var_systeminfo_TimeZone.txt DEL /F /Q %LOG_LOCATION%\var_systeminfo_TimeZone.txt)
+IF NOT EXIST %LOG_LOCATION%\var_systeminfo_TimeZone.txt (
+     IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	File [var_systeminfo_TimeZone.txt] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
 :: Process Registry Sub-Routine
