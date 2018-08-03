@@ -32,7 +32,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=1.7.1
+SET SCRIPT_VERSION=1.8.1
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -379,7 +379,7 @@ SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var_systeminfo_OsName.txt
 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get Windows version (Based on release ID --more relevant for Windows 10)
-FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO ECHO %%R > %LOG_LOCATION%\var_Windows_Version.txt
+FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO ECHO %%R> %LOG_LOCATION%\var_Windows_Version.txt
 SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var_Windows_Version.txt
 VER | FIND /I "Version 10." && (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Windows 10 version: %var_WINDOWS_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
@@ -387,7 +387,15 @@ VER | FIND /I "Version 10." && (
 ver > %LOG_LOCATION%\var_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var_ver.txt) DO SET var_VER=%%V
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to [%COMPUTER_ARCHITECTURE%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
+IF "%COMPUTER_ARCHITECTURE%"=="x64" (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Computer meets the x64 computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT "%COMPUTER_ARCHITECTURE%"=="x64" GoTo err04
 
+
+:: DEBUG OUTPUT FOR LOG SETTINGS
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Log level ALL is [%LOG_LEVEL_ALL%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEGUG]	Log level INFO is [%LOG_LEVEL_INFO%] >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Log level WARN is [%LOG_LEVEL_WARN%] >> %LOG_LOCATION%\%LOG_FILE%
@@ -578,7 +586,7 @@ IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt (
 IF EXIST %LOG_LOCATION%\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt GoTo jump8
 
 ::	Chocolatey First time install
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install..) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Attempting first time Chocolatey install... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Attempting first time Chocolatey install...
 ::		attempt to install from Sub-Routine
 GoTo subr1
@@ -597,12 +605,27 @@ IF %NETDOM_PRESENCE% EQU 1 GoTo Start
 IF %RSAT_ATTEMPT% EQU 2 GoTo err01
 
 ECHO Attempting to install RSAT NETDOM...
-IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "msu" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt) ELSE (
-	IF EXIST %FLASH_DRIVE_VOLUME% dir /B /A %FLASH_DRIVE_VOLUME% | FIND /I "msu" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
+IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt) ELSE (
+	IF EXIST %FLASH_DRIVE_VOLUME% dir /B /A %FLASH_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var_NETDOM_INSTALL.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	Package [%NETDOM_INSTALL%] was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var_NETDOM_INSTALL.txt GoTo start
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking that the RSAT installer [%NETDOM_INSTALL%] meets the computer architecture [%COMPUTER_ARCHITECTURE%]... >> %LOG_LOCATION%\%LOG_FILE%
+FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var_NETDOM_INSTALL.txt && (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	The RSAT package meets the %COMPUTER_ARCHITECTURE% computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var_NETDOM_INSTALL.txt || (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	The RSAT package doesn't match the computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Checking that the RSAT installer [%NETDOM_INSTALL%] meets the Windows Version [%var_WINDOWS_VERSION%]... >> %LOG_LOCATION%\%LOG_FILE%
+FIND /I "%var_WINDOWS_VERSION%" "%LOG_LOCATION%\var_NETDOM_INSTALL.txt" && (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	The RSAT package is a match for the Windows Version [%var_WINDOWS_VERSION%]!) >> %LOG_LOCATION%\%LOG_FILE%
+	FIND /I "%var_WINDOWS_VERSION%" "%LOG_LOCATION%\var_NETDOM_INSTALL.txt" || (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %TIME% [ERROR]	The RSAT package [%NETDOM_INSTALL%] is NOT a match for the Windows Version [%var_WINDOWS_VERSION%]!) >> %LOG_LOCATION%\%LOG_FILE%
+
+REM WILL NEED ERROR CATCHING FOR THE ABOVE TWO CONDITIONS
+
+
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Trying to install:[%NETDOM_INSTALL%]... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Installing NETDOM with this installer [%NETDOM_INSTALL%]...
 ECHO (Computer will reboot after instalation!)
@@ -744,10 +767,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: FUNCTION [1] Configure loc
 SET LOCAL_ADMINISTRATOR_STATUS=0
 NET USER Administrator && SET LOCAL_ADMINISTRATOR_STATUS=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOCAL_ADMINISTRATOR_STATUS% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Local Administrator was found in the user group >> %LOG_LOCATION%\%LOG_FILE%
 NET USER Administrator %ADMIN_PASSWORD% /ACTIVE:YES || SET LOCAL_ADMINISTRATOR_STATUS=0
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %TIME% [DEBUG]	[LOCAL_ADMINISTRATOR_STATUS] set to [%LOCAL_ADMINISTRATOR_STATUS%] after configuration >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOCAL_ADMINISTRATOR_STATUS% EQU 1 ECHO %DATE% %TIME% Local Administrator account configured/Re-configured! >> %LOG_LOCATION%\%PROCESS_1_FILE_NAME%
-IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Local Administrator account configured/Re-configured!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOCAL_ADMINISTRATOR_STATUS% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %TIME% [INFO]	Local Administrator account configured/Re-configured! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% ECHO Local Administrator account configured/Re-configured!
 IF %LOCAL_ADMINISTRATOR_STATUS% EQU 0 GoTo err10
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: FUNCTION [1] Configure local administrator >> %LOG_LOCATION%\%LOG_FILE%
@@ -1383,6 +1407,20 @@ ECHO FATAL ERROR!
 ECHO CONFIGURATION FILE SCHEMA DOESN'T MEET MINIMUM VERSION!
 PAUSE
 EXIT 
+
+:err04
+:: ERROR 04 Computer Architecture requirement not met
+CLS
+Color 4E
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	ENTER: error04 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %TIME% [FATAL]	The computer doesn't meet the x64 computer architecture requirement! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %TIME% [FATAL]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
+ECHO The computer doesn't meet the x64 computer architecture requirement!
+ECHO Aborting %SCRIPT_NAME%! 
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %TIME% [TRACE]	EXIT: error04 >> %LOG_LOCATION%\%LOG_FILE%
+TIMEOUT 60
+GoTo feTime
+
 
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 10's (Local Administrator)
