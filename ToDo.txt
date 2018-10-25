@@ -1,0 +1,86 @@
+#TO DO
+
+Features Flags
+--------------
+[+] New feature has been added
+[!] Feature has been improved
+[#] Feature has been fixed
+[-] Feature has been removed
+
+
+-- Better output for Diskpart (LIST VOLUME at end)
+-- put all the var files into a var folder
+
+
+
+#Long Term Features
+-- Advanced Disk Part configuration based on criteria (same as Choco Advanced)
+-- If a computer doesn't have a network connection and is configured for a domain join, it will be in a continues reboot cycle.
+-- Error checking for all variables make sure not blank/empty
+-- Ability to automatically create the computer object if its not already in Active Directory and choose which OU to create it. 
+-- Make file more readable by using ()
+
+
+#DONE
+
+2018-10-18
+-- ISO 8601 date
+-- Log output as ISO_DATE TIME
+-- Log output for variables uses {}
+-- Add automatic debugger based on name
+-- Log shipping
+-- WPF Config minimum version 2.0.0
+-- Add SHA256 for the commandlet
+
+
+2018-08-02
+-- Better error reporting on WLAN
+
+2018-08-01
+-- Make the PW files hidden after seeding
+-- Rename var_ files with no script version 
+-- Choco install doesn't run. (May need to reboot after install, or change META check to happen sooner)
+
+
+2018-07-23
+-- Change the way Choco is checked for being installed by looking at environmental variable %ChocolateyInstall%
+-- Run Diskpart on a second run (not from the Flash drive)
+-- Cleanup the unattend file default user from the Administrators group
+-- Change logging with timestamp
+
+2018-07-18
+* Cleanup domain user from local admin group when done.
+
+2018=07-16
+* Make sure the domain user is part of the Administrators group, if not add before domain add reboot 
+
+2018-06-29
+* Fix Scheduled Task after domain join
+
+2018-06-28
+* Check the config file schema for minimum version
+* Not to hard code flash drive in unattend xml file
+
+2017-10-30
+* Re-label error section
+
+2017-10-27
+* Configure the commandlet to work with a configuration file.
+
+2017-10-26
+* Only logoff console user if same as DEFAULT_USER from unattend.xml file.
+
+2017-10-25
+* Create a scheduled task & destroy scheduled task when completed
+* Logoff console session after WPF has completed.
+
+2017-10-20
+* Modify the netplwiz registry HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon AutoAdminLogon
+* Change TRACE language to ENTER: & EXIT:
+
+2017-10-19
+* Test the latest RSAT package [WindowsTH-RSAT_WS_1709-x64.msu]
+
+2017-10-11
+* Create ability to dymanically assign a Chocolatey package list based on hostname criteria.
+* Self -preservation with Ultimate commandlet needing to exit with Exit /B
