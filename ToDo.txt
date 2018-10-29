@@ -8,8 +8,9 @@ Features Flags
 [-] Feature has been removed
 
 
--- Better output for Diskpart (LIST VOLUME at end)
+
 -- put all the var files into a var folder
+-- Leverage Powershell for Get-Date format yyyy-MM-dd
 
 
 
@@ -21,7 +22,14 @@ Features Flags
 -- Make file more readable by using ()
 
 
+
+
 #DONE
+
+2018-10-29
+-- [#] Fix SHA256 check
+-- [!] Improved Diskpaert default config for better output for Diskpart
+
 
 2018-10-18
 -- ISO 8601 date
