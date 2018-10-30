@@ -8,10 +8,10 @@ Features Flags
 [-] Feature has been removed
 
 
-
--- put all the var files into a var folder
+-- Abort if SHA256 doesn't match
+-- change the language of flash drive to seed drive
 -- Leverage Powershell for Get-Date format yyyy-MM-dd
-
+-- Check disk for final reboot
 
 
 #Long Term Features
@@ -25,6 +25,12 @@ Features Flags
 
 
 #DONE
+
+2018-10-30
+-- [+] put all the var files into a var folder
+-- [+] Disk check, clean if dirty
+-- [!] Improved debug output
+
 
 2018-10-29
 -- [#] Fix SHA256 check

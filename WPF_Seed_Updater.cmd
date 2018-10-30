@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=1.5.1
+SET Version=1.6.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -43,7 +43,7 @@ SET FLASH_DRIVE_VOLUME=F:
 SET FLASH_DRIVE_VOLUME_KEYWORD=POSTFLIGHT
 SET SEED_SOURCE_WPF=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight
 SET SEED_SOURCE_CHOCO=D:\David_Geeraerts\Projects\Script Code\Chocolatey
-SET SEED_SOURCE_ULTI=D:\David_Geeraerts\Projects\Script Code
+SET SEED_SOURCE_ULTI=D:\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
 ::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
