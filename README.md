@@ -21,9 +21,7 @@ The commandlet should be thoroughly tested to ensure it doesn't break the main W
 As a suggestion for authoring a Ultimate commandlet, make 3 sections:
 (most activities will fall into one of these sections)
 
-[1]	INSTALLATIONS
-
-[2]	CONFIGURATIONS
-
-[3]	CLEANUP
+1. INSTALLATIONS
+2.	CONFIGURATIONS
+3.	CLEANUP
 
