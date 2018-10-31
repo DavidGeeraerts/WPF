@@ -11,7 +11,7 @@ Features Flags
 -- Abort if SHA256 doesn't match
 -- change the language of flash drive to seed drive
 -- Leverage Powershell for Get-Date format yyyy-MM-dd
--- Check disk for final reboot
+
 
 
 #Long Term Features
@@ -25,6 +25,10 @@ Features Flags
 
 
 #DONE
+
+2018-10-31
+-- [!] Improved log shipping and output
+
 
 2018-10-30
 -- [+] put all the var files into a var folder
