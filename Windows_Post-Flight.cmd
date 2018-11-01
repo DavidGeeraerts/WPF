@@ -1,5 +1,5 @@
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::		Windows Post-Flight Tool
+::		Windows Post-Flight Commander
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=2.1.3
+SET SCRIPT_VERSION=2.2.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -567,8 +567,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Chec
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::  get the console user
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Console user sub-routine!) >> %LOG_LOCATION%\%LOG_FILE%
+:: Get the console user
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Console user sub-routine...) >> %LOG_LOCATION%\%LOG_FILE%
 QUERY SESSION > %LOG_LOCATION%\var\var_CONSOLE_USER.txt
 FOR /F "tokens=2 delims= " %%U IN ('FIND /I "console" %LOG_LOCATION%\var\var_CONSOLE_USER.txt') DO SET CONSOLE_USER=%%U
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Console user ID is {%CONSOLE_USER%}! >> %LOG_LOCATION%\%LOG_FILE%
@@ -578,6 +578,17 @@ IF "%DEFAULT_USER%"=="%CONSOLE_USER%" (ECHO %ISO_DATE% %TIME% Console user [%CON
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Console user sub-routine!) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION Start!) >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Check if running with Administrative Privilege
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Check for Administrative Privilege... >> %LOG_LOCATION%\%LOG_FILE%
+openfiles.exe 2>nul
+SET ADMIN_STATUS=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ADMIN_STATUS: {%ADMIN_STATUS%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %ADMIN_STATUS% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Running with administrative privilege. >> %LOG_LOCATION%\%LOG_FILE%
+IF %ADMIN_STATUS% EQU 1 GoTo err05
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Check for Administrative Privilege. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1525,7 +1536,7 @@ Color 4E
 ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! CONFIGURATION FILE [%CONFIG_FILE_NAME%] SCHEMA DOESN'T MEET MINIMUM VERSION! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 ECHO FATAL ERROR!
 ECHO CONFIGURATION FILE SCHEMA DOESN'T MEET MINIMUM VERSION!
-PAUSE
+TIMEOUT 300
 EXIT 
 
 :err04
@@ -1534,13 +1545,28 @@ CLS
 Color 4E
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error04 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	The computer doesn't meet the x64 computer architecture requirement! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO The computer doesn't meet the x64 computer architecture requirement!
 ECHO Aborting %SCRIPT_NAME%! 
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error04 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 60
 GoTo feTime
 
+:err05
+:: ERROR 05 Not running with Administrative Privilege
+CLS
+Color 4E
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error05 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	The account running {%SCRIPT_NAME%} does not have administrative privileges! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
+:: CONSOLE Output
+ECHO The account running {%SCRIPT_NAME%} does not have administrative privileges!
+ECHO.
+ECHO Aborting {%SCRIPT_NAME%}!
+ECHO.
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
+TIMEOUT 500
+GoTo feTime
 
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 10's (Local Administrator)
