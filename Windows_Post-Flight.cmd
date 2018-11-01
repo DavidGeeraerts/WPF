@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=2.2.0
+SET SCRIPT_VERSION=3.0.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -60,7 +60,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=2.0.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.0.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -76,18 +76,18 @@ SET "POST_FLIGHT_CMD_NAME=Windows_Post-Flight.cmd"
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
 SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
 
-:: FLASH Drive
-::  provide the label for the flash drive
-::  flash drive should contain all of the necessary files, especially if not preseeded in the working directory
-SET FLASH_DRIVE_VOLUME_LABEL=POSTFLIGHT
+:: Seed Drive
+::  provide the label for the seed drive
+::  seed drive should contain all of the necessary files, especially if not pre-seeded in the working directory
+SET SEED_DRIVE_VOLUME_LABEL=POSTFLIGHT
 
 :: File that contains host 'database'
-::  FLASH DRIVE acts as the backup & update location for HOST_FILE_DATABASE (& OTHER assets)
+::  Seed DRIVE acts as the backup & update location for HOST_FILE_DATABASE (& OTHER assets)
 ::   format
 ::    #Hostname #MAC 00-00-00-00-00-00
 ::    %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%
 ::    this is the location and file name where the commandlet expects it
-::    commandlet will auto-update from [source] flash drive to destination
+::    commandlet will auto-update from [source] seed drive to destination
 SET "HOST_FILE_DATABASE_LOCATION=%POST_FLIGHT_DIR%"
 SET HOST_FILE_DATABASE=Host_MAC_List.txt
 
@@ -115,7 +115,7 @@ SET CHOCO_PACKAGE_LIST_FILE=Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt
 :: Ultimate Commandlet configurations
 ::  %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%
 SET "ULTIMATE_FILE_LOCATION=%POST_FLIGHT_DIR%"
-SET ULTIMATE_FILE_NAME=
+SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
 
 
 ::###########################################################################::
@@ -265,8 +265,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"POST_FLIGHT_DIR" "%~dp0\%CONFI
 FOR /F %%R IN ('ECHO %POST_FLIGHT_DIR%') DO SET POST_FLIGHT_DIR=%%R
 ::   POST_FLIGHT_CMD_NAME
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"POST_FLIGHT_CMD_NAME" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "POST_FLIGHT_CMD_NAME=%%V"
-::   FLASH_DRIVE_VOLUME_LABEL
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"FLASH_DRIVE_VOLUME_LABEL" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "FLASH_DRIVE_VOLUME_LABEL=%%V"
+::   SEED_DRIVE_VOLUME_LABEL
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"SEED_DRIVE_VOLUME_LABEL" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "SEED_DRIVE_VOLUME_LABEL=%%V"
 ::   HOST_FILE_DATABASE_LOCATION
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"HOST_FILE_DATABASE_LOCATION" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "HOST_FILE_DATABASE_LOCATION=%%V"
 FOR /F %%R IN ('ECHO %HOST_FILE_DATABASE_LOCATION%') DO SET HOST_FILE_DATABASE_LOCATION=%%R
@@ -317,6 +317,10 @@ FOR /F %%R IN ('ECHO %LOG_SHIPPING_LOCATION%') DO SET LOG_SHIPPING_LOCATION=%%R
 
 
 :: Advanced Settings
+::	REQUIRE_REPO_SHA256_CHECK
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"REQUIRE_REPO_SHA256_CHECK" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "REQUIRE_REPO_SHA256_CHECK=%%V"
+::	REPO_SHA256_URI
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"REPO_SHA256_URI" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "REPO_SHA256_URI=%%V"
 ::   SEED_LOCATION_CLEANUP
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"SEED_LOCATION_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "SEED_LOCATION_CLEANUP=%%V"
 ::   CHOCOLATEY_ADVANCED
@@ -496,7 +500,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEFAULT_HOSTNAME: {%DEFAULT_HOSTNAME%} 
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEFAULT_USER: {%DEFAULT_USER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DISKPART_COMMAND_FILE: {%DISKPART_COMMAND_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DOMAIN_USER_STATUS: {%DOMAIN_USER_STATUS%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: FLASH_DRIVE_VOLUME_LABEL: {%FLASH_DRIVE_VOLUME_LABEL%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_DRIVE_VOLUME_LABEL: {%SEED_DRIVE_VOLUME_LABEL%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE_LOCATION: {%HOST_FILE_DATABASE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE: {%HOST_FILE_DATABASE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ISO_DATE: {%ISO_DATE%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -525,6 +529,8 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_5_FILE_NAME: {%PROCESS_5_FILE_N
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_6_FILE_NAME: {%PROCESS_6_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_COMPLETE_FILE: {%PROCESS_COMPLETE_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_CHECK_NUMBER: {%PROCESS_CHECK_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REPO_SHA256_URI: {%REPO_SHA256_URI%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REQUIRE_REPO_SHA256_CHECK: {%REQUIRE_REPO_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64: {%RSAT_PACKAGE_W10x64%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -559,11 +565,16 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: SHA 256 Checker
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: WPF SHA256 Checker...) >> %LOG_LOCATION%\%LOG_FILE%
-IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	WPF SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (
+	ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: WPF SHA256 Checker...
+	) >> %LOG_LOCATION%\%LOG_FILE%
+IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
+	IF %LOG_LEVEL_WARN% EQU 1 (ECHO %ISO_DATE% %TIME% [WARN]	WPF seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
 	)
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Checker...) >> %LOG_LOCATION%\%LOG_FILE%
+
+:skipWGet
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Checker.) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -598,7 +609,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: META Dependency
 ECHO Working on meta dependencies...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on meta dependencies... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO.
-::	(1) Is everyting already done?
+::	(1) Is everything already done?
 Echo Checking to see if everything is already done...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[1] Checking to see if everything is already done? >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [1]: for Everything Already Done... >> %LOG_LOCATION%\%LOG_FILE%
@@ -609,37 +620,37 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like a first run o
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [1] for Everything Already Done. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(2) Get the Flash Drive Volume
+::	(2) Get the Seed Drive Volume
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {2}: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
-Echo Looking for a flashdrive with volume label [%FLASH_DRIVE_VOLUME_LABEL%]
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looking for a seed drive with volume label {%FLASH_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
+Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
 DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
-FIND "%FLASH_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\FOUND_FLASH_DRIVE.txt
-FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\FOUND_FLASH_DRIVE.txt") DO SET FLASH_DRIVE_VOLUME=%%G:
-IF EXIST %FLASH_DRIVE_VOLUME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed Drive Found: {%FLASH_DRIVE_VOLUME%}) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %FLASH_DRIVE_VOLUME% ECHO Flash Drive Found: %FLASH_DRIVE_VOLUME%
-IF NOT EXIST %FLASH_DRIVE_VOLUME% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	No Seed Drive found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %FLASH_DRIVE_VOLUME% ECHO No Flash Drive found!
+FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\FOUND_SEED_DRIVE.txt
+FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
+IF EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed Drive Found: {%SEED_DRIVE_VOLUME%}) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %SEED_DRIVE_VOLUME% ECHO Seed Drive Found: %SEED_DRIVE_VOLUME%
+IF NOT EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	No Seed Drive found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %SEED_DRIVE_VOLUME% ECHO No seed drive found!
 IF EXIST %LOG_LOCATION%\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FOUND_FLASH_DRIVE.txt del /F /Q %LOG_LOCATION%\FOUND_FLASH_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\FOUND_FLASH_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {2}: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(3)	Update seed location from FLASH Drive
+::	(3)	Update seed location from Seed Drive
 ::		this must include the host file database
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {3}: update seed location if seed drive found... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Seed location: %POST_FLIGHT_DIR%
-IF EXIST %FLASH_DRIVE_VOLUME% ECHO Updating seed location with flash drive...
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Updating seed location with seed drive {%FLASH_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
-IF EXIST %FLASH_DRIVE_VOLUME% ROBOCOPY %FLASH_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
+IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
-IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%FLASH_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %ROBO_SEED_CODE% EQU 3 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%FLASH_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %ROBO_SEED_CODE% LEQ 3 ECHO Seed location [%POST_FLIGHT_DIR%] just got updated from Flash drive [%FLASH_DRIVE_VOLUME%]!
+IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ROBO_SEED_CODE% EQU 3 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ROBO_SEED_CODE% LEQ 3 ECHO Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive [%SEED_DRIVE_VOLUME%]!
 IF %ROBO_SEED_CODE% GTR 7 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Seed location {%POST_FLIGHT_DIR%} failed to update!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to update!
 :jump3
@@ -729,14 +740,14 @@ GoTo autoSU
 
 :installRSAT
 ::	(9) Try and fix NETDOM DEPENDENCY
-::	will try and install Remote Server Administration Tools (NETDOM) from seed location or flash drive if present
+::	will try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {9}: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
 IF %RSAT_ATTEMPT% EQU 2 GoTo err01
 
 ECHO Attempting to install RSAT NETDOM...
 IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt) ELSE (
-	IF EXIST %FLASH_DRIVE_VOLUME% dir /B /A %FLASH_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
+	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package [%NETDOM_INSTALL%] was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -930,7 +941,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_2_FILE_NAME% GoTo skip2
 
 :trap2.1
 :: Trap 2.1 to catch if this is a FirstTimeRun
-::	first time runs could be running the WPF commandlet from a flash drive
+::	first time runs could be running the WPF commandlet from a seed drive
 ::	which might be affected by DISKPART
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Trap2.1 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	STEP2 DiskPart being skipped due to first time run. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1564,9 +1575,38 @@ ECHO The account running {%SCRIPT_NAME%} does not have administrative privileges
 ECHO.
 ECHO Aborting {%SCRIPT_NAME%}!
 ECHO.
+ECHO.
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
+IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: {%LOG_LOCATION%\var} got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: {%LOG_LOCATION%\var} got deleted!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 500
 GoTo feTime
+
+:err06
+:: ERROR 06 Failed SHA256 check against repo.
+CLS
+Color 4E
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error06 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Failed SHA256 check against the GitHub repository SHA256! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
+:: CONSOLE Output
+ECHO Failed SHA256 check against the GitHub repository SHA256!
+ECHO.
+ECHO Aborting {%SCRIPT_NAME%}!
+ECHO.
+ECHO.
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
+IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: {%LOG_LOCATION%\var} got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: {%LOG_LOCATION%\var} got deleted!
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error06 >> %LOG_LOCATION%\%LOG_FILE%
+TIMEOUT 500
+GoTo feTime
+
 
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 10's (Local Administrator)
