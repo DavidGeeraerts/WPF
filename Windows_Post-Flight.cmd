@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.0.0
+SET SCRIPT_VERSION=3.0.1
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -565,16 +565,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: SHA 256 Checker
-IF %LOG_LEVEL_TRACE% EQU 1 (
-	ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: WPF SHA256 Checker...
-	) >> %LOG_LOCATION%\%LOG_FILE%
-IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
-	IF %LOG_LEVEL_WARN% EQU 1 (ECHO %ISO_DATE% %TIME% [WARN]	WPF seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
-	)
-
-:skipWGet
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Checker.) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: WPF SHA256 Checker... >> %LOG_LOCATION%\%LOG_FILE%
+IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	WPF seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Checker. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
