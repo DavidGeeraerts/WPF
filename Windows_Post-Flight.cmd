@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.0.1
+SET SCRIPT_VERSION=3.0.2
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -402,6 +402,8 @@ IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_D
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" (
 	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+	) ELSE (
+		IF EXIST %LOG_LOCATION%\FirstTimeRun.txt FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
 	) && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
 ::	var_TimeZone has to be quoted for output due to "&" special character
@@ -419,21 +421,23 @@ IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" 
 SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
 IF EXIST %LOG_LOCATION%\var\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
 :: fancy parsing for proper output of info
-IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) && (
+IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
+	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt)
+	) && (
 	IF EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
 	)
-
 IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_OsName.txt (
-     FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt
-	 ) && (IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo_OsName.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+	FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt
+	 ) ELSE (
+		IF EXIST %LOG_LOCATION%\FirstTimeRun.txt FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt 
+	 ) && (
+		IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo_OsName.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
 		)
 SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var\var_systeminfo.txt
 SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var\var_systeminfo_OsName.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get Windows version (Based on release ID --more relevant for Windows 10)
-IF NOT EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" (
-	FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt
-	) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_Windows_Version.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_Windows_Version.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var\var_Windows_Version.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WINDOWS_VERSION: {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 VER | FIND /I "Version 10." && (
@@ -462,7 +466,10 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Log level TRACE is {%L
 :: Misc. Variables ::
 :: RSAT Attempts
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Attempts... >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt SET RSAT_ATTEMPT=0
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q "%LOG_LOCATION%\var\var_RSAT_attempt.txt"
+IF NOT EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt (SET RSAT_ATTEMPT=0) ELSE (
+	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt SET RSAT_ATTEMPT=0
+	)
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt SET /P RSAT_ATTEMPT= < %LOG_LOCATION%\var\var_RSAT_attempt.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT:RSAT Attempts. >> %LOG_LOCATION%\%LOG_FILE%
@@ -471,6 +478,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA 256 Check..
 IF NOT EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	 WPF SHA256 txt file not found! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" SET /P WPF_SHA256= < "%~dp0\%SCRIPT_NAME%_SHA256.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" DEL /F /Q "%LOG_LOCATION%\WPF_SHA256_check.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_SHA256_check.txt} just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%~dp0\%POST_FLIGHT_CMD_NAME%" SHA256') DO ECHO %%P>> %LOG_LOCATION%\var\var_WPF_SHA256_check.txt
 IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK= < "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA 256 Check. >> %LOG_LOCATION%\%LOG_FILE%
@@ -743,12 +751,12 @@ ECHO Attempting to install RSAT NETDOM...
 IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt) ELSE (
 	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package [%NETDOM_INSTALL%] was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package {%NETDOM_INSTALL%} was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt GoTo start
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the computer architecture {%COMPUTER_ARCHITECTURE%}... >> %LOG_LOCATION%\%LOG_FILE%
 FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt && (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package meets the %COMPUTER_ARCHITECTURE% computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package meets the {%COMPUTER_ARCHITECTURE%} computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
 FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt || (
 	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package doesn't match the computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
 
@@ -862,10 +870,10 @@ IF NOT EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (
 	 ECHO %TS_D_REBOOT% > %LOG_LOCATION%\var\var_TS_D_REBOOT.txt
      ) && (
      IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (
-	      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [var_TS_D_REBOOT.txt] just got created!
+	      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_TS_D_REBOOT.txt} just got created!
      )) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SET /P TS_D_REBOOT= < %LOG_LOCATION%\var\var_TS_D_REBOOT.txt) && SET /A "TS_D_REBOOT=TS_D_REBOOT+1"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Task Scheduled Domain account reboot set to [%TS_D_REBOOT%]! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Task Scheduled Domain account reboot set to {%TS_D_REBOOT%}! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer should reboot to run as a domain user
 (shutdown /r /t 15) & (GoTo feTime)
@@ -1253,7 +1261,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [su
 ::	Check for updates on Chocolatey webiste for installation:
 ::		https://chocolatey.org/install#install-with-cmdexe
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG] PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
