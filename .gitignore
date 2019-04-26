@@ -10,3 +10,9 @@ wget\.exe
 null
 
 WGET_SHA256_Code\.cmd
+
+Windows_Post-Flight_beta\.cmd
+
+Windows_Post-Flight_beta\.config
+
+*.old

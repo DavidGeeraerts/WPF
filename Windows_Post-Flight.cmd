@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.0.2
+SET SCRIPT_VERSION=3.1.0
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -60,7 +60,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.0.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.1.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +74,7 @@ SET "POST_FLIGHT_CMD_NAME=Windows_Post-Flight.cmd"
 ::  Main script log file
 :: %LOG_LOCATION%\%LOG_FILE%
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
-SET LOG_FILE=Windows_Post-Flight_%SCRIPT_VERSION%.Log
+SET LOG_FILE=Windows_Post-Flight.Log
 
 :: Seed Drive
 ::  provide the label for the seed drive
@@ -125,20 +125,20 @@ SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
 ::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
-SET PROCESS_1_FILE_NAME=RAN_Administrator_configured_%SCRIPT_VERSION%.txt
+SET PROCESS_1_FILE_NAME=RAN_Administrator_configured.txt
 :: Process 2: Process Disk condifuration
-SET PROCESS_2_FILE_NAME=RAN_DiskPart_%SCRIPT_VERSION%.txt
+SET PROCESS_2_FILE_NAME=RAN_DiskPart.txt
 :: Process 3: Change the hostname
-SET PROCESS_3_FILE_NAME=RAN_Hostname_Changed_%SCRIPT_VERSION%.txt
+SET PROCESS_3_FILE_NAME=RAN_Hostname_Changed.txt
 :: Process 4: Join a Windows Domain
-SET PROCESS_4_FILE_NAME=RAN_Domain_Joined_%SCRIPT_VERSION%.txt
+SET PROCESS_4_FILE_NAME=RAN_Domain_Joined.txt
 :: Process 5: Run Chocolatey
-SET PROCESS_5_FILE_NAME=RAN_Chocolatey_%SCRIPT_VERSION%.txt
+SET PROCESS_5_FILE_NAME=RAN_Chocolatey.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=RAN_Ultimate_%SCRIPT_VERSION%.txt
+SET PROCESS_6_FILE_NAME=RAN_Ultimate.txt
 
 :: Completed File name
-SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%_%SCRIPT_VERSION%.log
+SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
 
 
 :: To cleanup or Not to cleanup, the seed location
@@ -166,6 +166,11 @@ SET LOG_LEVEL_ERROR=1
 SET LOG_LEVEL_FATAL=1
 SET LOG_LEVEL_DEBUG=0
 SET LOG_LEVEL_TRACE=0
+
+:: To cleanup or Not to cleanup, var folder
+::  0 = OFF (NO)
+::  1 = ON (YES)
+SET VAR_CLEANUP=1
 
 :: PROCESS CHECK
 ::  (possible future expansion)
@@ -200,9 +205,36 @@ FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET S_ms=%%h
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Console Output
+ECHO **************************************************************************
+ECHO * 
+ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
+ECHO *
+ECHO * %DATE% %TIME%
+ECHO *
+ECHO **************************************************************************
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+:fISO8601
+:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
+ECHO.
+ECHO Checking on Powershell...
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skipPS
+IF NOT EXIST %TEMP%\var MD %TEMP%\var 
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion > %TEMP%\var\var_PS_Version.txt
+FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
+:: Easiest way to get ISO date
+@powershell Get-Date -format "yyyy-MM-dd" > %TEMP%\var\var_ISO8601_Date.txt
+SET /P ISO_DATE= < %TEMP%\var\var_ISO8601_Date.txt
+:skipPS
+
+:: Fallback if PowerShell not available
 :fmanualISO
 :: Manually create the ISO 8601 date format
-::	this assumes the format of mm/dd/yyyy
 IF DEFINED ISO_DATE GoTo skipfmiso
 FOR /F "tokens=2 delims=/ " %%T IN ("%DATE%") DO SET ISO_MONTH=%%T
 FOR /F "tokens=3 delims=/ " %%T IN ("%DATE%") DO SET ISO_DAY=%%T
@@ -212,31 +244,31 @@ SET ISO_DATE=%ISO_YEAR%-%ISO_MONTH%-%ISO_DAY%
 :skipfmiso
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: USER
 ::	user should be a domain user for everything to run properly
-WHOAMI /FQDN && SET DOMAIN_USER_STATUS=1
+ECHO.
+ECHO Checking user domain status... 
+(WHOAMI /FQDN 2> nul) && SET DOMAIN_USER_STATUS=1
 IF DEFINED DOMAIN_USER_STATUS GoTo skipD1
-WHOAMI /FQDN || SET DOMAIN_USER_STATUS=0
+(WHOAMI /FQDN 2> nul) || SET DOMAIN_USER_STATUS=0
 :skipD1
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: Console Output
-ECHO %ISO_DATE% %TIME%	START...
-ECHO %SCRIPT_NAME% %SCRIPT_VERSION%
-ECHO.
-ECHO Processing the configuration file {%SCRIPT_NAME%.config}...
-ECHO.
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::###########################################################################::
 :: CONFIGURATION FILE OVERRIDE
 ::###########################################################################::
 :: START CONFIGURATION FILE LOAD
-
+ECHO.
+ECHO.
+ECHO Starting...
+ECHO.
+ECHO. 
 ECHO Processing configuration file...
-ECHO {%CONFIG_FILE_NAME%}...
+ECHO Configuration file {%SCRIPT_NAME%.config}
+ECHO.
 
 REM Any configuration variable being pulled from the configuration file that is using another variable
 REM  needs to be reset so as not to take the string from the configuration file literally.
@@ -341,6 +373,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_FATAL" "%~dp0\%CONFI
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_DEBUG" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_DEBUG=%%V"
 ::   LOG_LEVEL_TRACE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_TRACE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_TRACE=%%V"
+:: VAR_CLEANUP
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"VAR_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "VAR_CLEANUP=%%V"
 :: DEBUGGER
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DEBUGGER" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "DEBUGGER=%%V"
 ::   RSAT_PACKAGE_W10x64
@@ -375,7 +409,10 @@ IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	DEBUGGER
 :: Computer used for debugging so that automatic ALL logging is on
-HOSTNAME | FIND /I "%DEBUGGER%" && SET LOG_LEVEL_ALL=1
+IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger... >> %LOG_LOCATION%\%LOG_FILE%
+HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0)
+HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	 VARIABLE: DEBUGGER: %DEBUGGER% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :flogl
@@ -396,20 +433,21 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: function Check 
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :start
+ECHO.
+ECHO Starting general information gathering...
+ECHO.
+ECHO Logs can be found here: %LOG_LOCATION%
+ECHO %SCRIPT_NAME% log file: %LOG_LOCATION%\%LOG_FILE%
+ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Start!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} was created!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" (
-	FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
-	) ELSE (
-		IF EXIST %LOG_LOCATION%\FirstTimeRun.txt FOR /F "tokens=2-3 delims=(" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO Time Zone: ^(%%S^(%%T > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
-	) && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
-::	var_TimeZone has to be quoted for output due to "&" special character
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
-ECHO Logs can be found here: %LOG_LOCATION%
-ECHO Log file for WPF: %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt (
+	FOR /F "tokens=2-5 delims=()&" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO %%S%%T%%U%%V > %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
+	) && IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_TimeZone= < %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %var_TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Minimum config file {%CONFIG_FILE_NAME%} version {%WPF_CONFIG_SCHEMA_VERSION_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
 whoami > "%LOG_LOCATION%\var\var_whoami.txt"
@@ -475,9 +513,9 @@ IF EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt SET /P RSAT_ATTEMPT= < %LOG_LOC
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT:RSAT Attempts. >> %LOG_LOCATION%\%LOG_FILE%
 :: SHA 256 Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA 256 Check... >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	 WPF SHA256 txt file not found! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	%SCRIPT_NAME% SHA256 txt file not found! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" SET /P WPF_SHA256= < "%~dp0\%SCRIPT_NAME%_SHA256.txt"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: %SCRIPT_NAME%_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" DEL /F /Q "%LOG_LOCATION%\WPF_SHA256_check.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_SHA256_check.txt} just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%~dp0\%POST_FLIGHT_CMD_NAME%" SHA256') DO ECHO %%P>> %LOG_LOCATION%\var\var_WPF_SHA256_check.txt
 IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK= < "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
@@ -546,6 +584,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_NAME%} >> %LOG_LO
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO_OSNAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_TimeZone: {%var_TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -573,10 +612,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: SHA 256 Checker
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: WPF SHA256 Checker... >> %LOG_LOCATION%\%LOG_FILE%
-IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	WPF seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: WPF SHA256 Checker. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA256 Checker... >> %LOG_LOCATION%\%LOG_FILE%
+IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	%SCRIPT_NAME% seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Checker. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -609,22 +648,25 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Check for Admini
 :metaDC
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: META Dependency Check! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Working on meta dependencies...
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on meta dependencies... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO.
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on meta dependencies... >> %LOG_LOCATION%\%LOG_FILE%
 ::	(1) Is everything already done?
 Echo Checking to see if everything is already done...
+ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[1] Checking to see if everything is already done? >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [1]: for Everything Already Done... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like everything is already done! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo err100
 ECHO First run or a follow up run!
+ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like a first run or a follow up run! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [1] for Everything Already Done. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(2) Get the Seed Drive Volume
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {2}: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
-Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]
+Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]...
+ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
 DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
@@ -644,6 +686,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 ::		this must include the host file database
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {3}: update seed location if seed drive found... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Seed location: %POST_FLIGHT_DIR%
+ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
@@ -676,6 +719,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 ::		Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
 ::	not present until proven otherwise
 Echo Checking for NETDOM presence...
+ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {5}: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Checking for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
 SET NETDOM_PRESENCE=0
@@ -692,6 +736,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 ::	(6) Password Files
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {6}: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Checking for password files...
+ECHO.
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] found!
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% SET /P ADMIN_PASSWORD= < %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
@@ -708,6 +753,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 
 ::	(7) HOST DATABASE
 Echo Checking for host database...
+ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {7}: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database found!
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database not found!
@@ -719,6 +765,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 
 ::	(8) Chocolatey
 Echo Checking for Chocolatey...
+ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check {8}: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt (
@@ -730,6 +777,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Meta Dependency 
 ::	Chocolatey First time install
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Attempting first time Chocolatey install... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Attempting first time Chocolatey install...
+ECHO.
 ::		attempt to install from Sub-Routine
 GoTo subr1
 
@@ -742,12 +790,31 @@ GoTo autoSU
 
 :installRSAT
 ::	(9) Try and fix NETDOM DEPENDENCY
-::	will try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present
+::	Either use DISM or try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present for older versions of Windows 10 1803 or older.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {9}: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
 IF %RSAT_ATTEMPT% EQU 2 GoTo err01
 
-ECHO Attempting to install RSAT NETDOM...
+ECHO Attempting to install RSAT [NETDOM]...
+ECHO.
+
+:: Windows 10 1809 or later
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM NETDOM installation... >> %LOG_LOCATION%\%LOG_FILE%
+IF %var_WINDOWS_VERSION% LSS 1809 GoTo skip1809
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing [NETDOM] via DISM for Windows 10 {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %var_WINDOWS_VERSION% GEQ 1809 (
+	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
+	)
+(NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
+IF %NETDOM_PRESENCE% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %NETDOM_PRESENCE% NEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	[NETDOM] failed to install via DISM! >> %LOG_LOCATION%\%LOG_FILE%
+IF %NETDOM_PRESENCE% NEQ 1 (NETDOM HELP 2> nul) || (SET NETDOM_PRESENCE=0)
+IF %NETDOM_PRESENCE% EQU 1 GoTo autoSU
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: DISM NETDOM installation. >> %LOG_LOCATION%\%LOG_FILE%
+:skip1809
+
+:: Windows 10 1803 or older
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: NETDOM installation via package... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt) ELSE (
 	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
 IF EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt
@@ -770,7 +837,9 @@ REM WILL NEED ERROR CATCHING FOR THE ABOVE TWO CONDITIONS
 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Trying to install:{%NETDOM_INSTALL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Installing NETDOM with this installer {%NETDOM_INSTALL%}...
+ECHO.
 ECHO (Computer will reboot after instalation!)
+ECHO.
 SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	RSAT_ATTEMPT just got set to {%RSAT_ATTEMPT%}! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %RSAT_ATTEMPT% > %LOG_LOCATION%\var\var_RSAT_attempt.txt
@@ -792,6 +861,7 @@ IF %NETDOM_PRESENCE% EQU 0 DIR %SYSTEMROOT%\SysWOW64 | FIND /I "netdom.exe" && S
 IF EXIST %SYSTEMROOT%\SysWOW64\netdom.exe SET "PATH=%PATH%;%SYSTEMROOT%\SysWOW64"
 IF %NETDOM_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR] NETDOM is still NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is now present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: NETDOM installation via package. >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {9}: Remote Server Administrative Tools [NETDOM] check and installation. >> %LOG_LOCATION%\%LOG_FILE%
 GoTo autoSU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -846,19 +916,20 @@ GoTo startS
 :stepSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Working on Scheduled Task as a domain computer...
+ECHO.
 
 :trapSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-SCHTASKS /Query /TN "%SCRIPT_NAME%" || IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] doesn't already exist, and was expected! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo skipSTD
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" || GoTo fSTD
+(SCHTASKS /Query /TN "%SCRIPT_NAME%" 2> nul) || IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] doesn't already exist, and was expected! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) && GoTo skipSTD
+IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) || GoTo fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 
 :fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_DOMAIN%\%NETDOM_USERD% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /F
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
-FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
+(FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt 2> nul) || IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
 :: If setting the domain account for the scheduled task fails resort back to STL
 :: This is failing and skipping the reboot
 :: FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
@@ -998,7 +1069,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3 >> %LOG_L
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% GoTo skip3
 IF /I "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname:{%COMPUTERNAME%} needs to be changed!) >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" ECHO Hostname:[%COMPUTERNAME%] needs to be changed!
-IF /I NOT "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Current computer name {%COMPUTERNAME%} is not the same as default hostname {%DEFAULT_HOSTNAME%}. The hostname will still be attempted to be changed based on Host file database {%HOST_FILE_DATABASE%}.) >> %LOG_LOCATION%\%LOG_FILE%
+IF /I NOT "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Current computer name {%COMPUTERNAME%} already configured!) >> %LOG_LOCATION%\%LOG_FILE%
+IF /I NOT "%COMPUTERNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	The hostname will still be checked based on Host file database {%HOST_FILE_DATABASE%}.) >> %LOG_LOCATION%\%LOG_FILE%
+
 GoTo fmac
 
 :fmac
@@ -1479,7 +1552,7 @@ IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 1 (
 :: ending when complete (this is a jump spot for err100 --when everything is already done).
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Ending for complete >> %LOG_LOCATION%\%LOG_FILE%
 :: Remove the var directory if set for cleanup
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
 IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION {%LOG_LOCATION%\var} has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
@@ -1511,9 +1584,23 @@ GoTo feTime
 :: ERROR CONF is a FATAL ERROR for NO configuration file
 Color 4E
 ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! NO CONFIGURATION FILE [.\%CONFIG_FILE_NAME%] FOUND! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
-ECHO FATAL ERROR!
-ECHO NO CONFIGURATION FILE WAS FOUND
-PAUSE
+:: Console Output
+ECHO **************************************************************************
+ECHO * 
+ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
+ECHO *
+ECHO * %DATE% %TIME%
+ECHO *
+ECHO **************************************************************************
+ECHO.
+ECHO.
+ECHO !FATAL ERROR!
+ECHO.
+ECHO NO CONFIGURATION FILE WAS FOUND!
+ECHO.
+ECHO Looking for configuration file: {.\%CONFIG_FILE_NAME%}
+ECHO.
+TIMEOUT 600
 EXIT 
 
 :err00
@@ -1547,8 +1634,20 @@ GoTo feTime
 CLS
 Color 4E
 ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! CONFIGURATION FILE [%CONFIG_FILE_NAME%] SCHEMA DOESN'T MEET MINIMUM VERSION! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
-ECHO FATAL ERROR!
+ECHO **************************************************************************
+ECHO * 
+ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
+ECHO *
+ECHO * %DATE% %TIME%
+ECHO *
+ECHO **************************************************************************
+ECHO.
+ECHO.
+ECHO !FATAL ERROR!
+ECHO.
+ECHO.
 ECHO CONFIGURATION FILE SCHEMA DOESN'T MEET MINIMUM VERSION!
+ECHO.
 TIMEOUT 300
 EXIT 
 
@@ -1573,6 +1672,15 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error05 >> %LOG
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	The account running {%SCRIPT_NAME%} does not have administrative privileges! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 :: CONSOLE Output
+ECHO **************************************************************************
+ECHO * 
+ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
+ECHO *
+ECHO * %DATE% %TIME%
+ECHO *
+ECHO **************************************************************************
+ECHO.
+ECHO.
 ECHO The account running {%SCRIPT_NAME%} does not have administrative privileges!
 ECHO.
 ECHO Aborting {%SCRIPT_NAME%}!
@@ -1786,7 +1894,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end tim
 :: END OF FILE
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
