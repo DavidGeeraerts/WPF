@@ -1,4 +1,5 @@
 # Changelog project: Windows Post Flight
+# The Windows Autopilot Doppelganger.
 ---
 
 ## Features Heading
@@ -10,10 +11,14 @@
 - `Deprecated` for soon-to-be removed features.
 
 ---
+## Version 3.1.0 2019-04-26
+#### Fixed
+- syntax error
+- logging for debugger
 
+---
 ## Version 3.1.0 2019-04-26
 
-# THIS WILL BE THE LAST VERSION FOR WINDOWS POST-Flight
 
 #### Added
 - console output
@@ -31,8 +36,6 @@
 #### Removed
 - script version from logfile name
 
-#### Deprecated
-- Windows Post-Flight is now deprecated. New project is [WAD] Windows Autopilot Doppelganger.
 
 ---
 #### Added

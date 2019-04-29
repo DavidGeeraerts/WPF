@@ -36,7 +36,7 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.1.0
+SET SCRIPT_VERSION=3.1.1
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -373,7 +373,7 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_FATAL" "%~dp0\%CONFI
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_DEBUG" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_DEBUG=%%V"
 ::   LOG_LEVEL_TRACE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_TRACE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_TRACE=%%V"
-:: VAR_CLEANUP
+::   VAR_CLEANUP
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"VAR_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "VAR_CLEANUP=%%V"
 :: DEBUGGER
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DEBUGGER" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "DEBUGGER=%%V"
@@ -409,11 +409,12 @@ IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	DEBUGGER
 :: Computer used for debugging so that automatic ALL logging is on
-IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger...) >> %LOG_LOCATION%\%LOG_FILE%
 HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0)
-HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	 VARIABLE: DEBUGGER: %DEBUGGER% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger. >> %LOG_LOCATION%\%LOG_FILE%
+HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) && IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	 VARIABLE: DEBUGGER: {%DEBUGGER%}) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :flogl
 :: FUNCTION: Check and configure for ALL LOG LEVEL
