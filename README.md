@@ -30,3 +30,4 @@ As a suggestion for authoring a Ultimate commandlet, make 3 sections:
 2.	CONFIGURATIONS
 3.	CLEANUP
 
+There's a template available.
