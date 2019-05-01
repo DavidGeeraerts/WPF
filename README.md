@@ -1,16 +1,15 @@
 # Windows Post-Flight Commander
 
 
-(the anti-Windows Deployment Services)
+(the anti-Windows Deployment Services | Doppelganer to Windows Autopilot)
 
-| NAME       | Windows Post Flight commander |
-| :--------- | :---------------------------- |
+
 
 
 ***No [Full] Documentation yet! Some Documentation in the config file.***
 
 
-# Windows Post Flight commander
+# Major Features
 1.	Configures local administrator account
 2.	Configures local hard drives on the computer
 3.	Renames the computer
@@ -18,8 +17,21 @@
 5.	Runs customized Chocolatey package list based on hostname
 6.	Runs Windows Ultimate commandlet
 
+## Minor Features
+- Configuration file
+- Log level control
+- Extensive logging
+- Log shipping to network/remote server
+- SHA256 checking
+- Auto-config PC Debugger
+- Script lapse time
+- Auto install RSAT (Remote Server Administrator Tools)
+- Disk check & repair
+- Host mac database lookup
 
-## WINDOWS ULTIMATE COMMANDLET
+
+
+### WINDOWS ULTIMATE COMMANDLET
 
 The commandlet should be thoroughly tested to ensure it doesn't break the main Windows Post Flight Commandlet.
 

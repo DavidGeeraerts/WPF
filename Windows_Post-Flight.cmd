@@ -36,10 +36,10 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.1.1
+SET SCRIPT_VERSION=3.2.0
+SET SCRIPT_BUILD=130442
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
-mode con:lines=50
 Prompt WPF$G
 color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -206,6 +206,7 @@ FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET S_ms=%%h
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Console Output
+CLS
 ECHO **************************************************************************
 ECHO * 
 ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
@@ -221,12 +222,14 @@ ECHO **************************************************************************
 ECHO.
 ECHO Checking on Powershell...
 IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skipPS
+IF EXIST %LOG_LOCATION%\var\var_PS_Version.txt GoTo skipChkPS
 IF NOT EXIST %TEMP%\var MD %TEMP%\var 
 IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion > %TEMP%\var\var_PS_Version.txt
 FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
+:skipChkPS
 :: Easiest way to get ISO date
 @powershell Get-Date -format "yyyy-MM-dd" > %TEMP%\var\var_ISO8601_Date.txt
 SET /P ISO_DATE= < %TEMP%\var\var_ISO8601_Date.txt
@@ -245,16 +248,7 @@ SET ISO_DATE=%ISO_YEAR%-%ISO_MONTH%-%ISO_DAY%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:: USER
-::	user should be a domain user for everything to run properly
-ECHO.
-ECHO Checking user domain status... 
-(WHOAMI /FQDN 2> nul) && SET DOMAIN_USER_STATUS=1
-IF DEFINED DOMAIN_USER_STATUS GoTo skipD1
-(WHOAMI /FQDN 2> nul) || SET DOMAIN_USER_STATUS=0
-:skipD1
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 
 ::###########################################################################::
@@ -404,14 +398,22 @@ IF NOT EXIST "%LOG_LOCATION%\%LOG_FILE%" ECHO First Time Run: %ISO_DATE% %TIME% 
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	START...) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	ALL logging is turned on from config file!) >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
+
+:: Now that logging is configured, move some temp var files
+COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var"
+IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	DEBUGGER
 :: Computer used for debugging so that automatic ALL logging is on
+::	this is hostname dependent, so first run will not be automatically set.
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger...) >> %LOG_LOCATION%\%LOG_FILE%
-HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0)
-HOSTNAME | (FIND /I "%DEBUGGER%" 2> nul) && IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	 VARIABLE: DEBUGGER: {%DEBUGGER%}) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED DEBUGGER GoTo skipDebug
+hostname | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
+hostname | (FIND /I "%DEBUGGER%" 2> nul) && IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
+:skipDebug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -419,9 +421,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %
 :flogl
 :: FUNCTION: Check and configure for ALL LOG LEVEL
 IF %LOG_LEVEL_ALL% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Check for ALL log level!) ELSE (
-	IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Check for ALL log level!) 
-	) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Check for ALL log level! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
+	IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Check for ALL log level! >> %LOG_LOCATION%\%LOG_FILE%) 
+	) 
 IF %LOG_LEVEL_ALL% EQU 1 SET LOG_LEVEL_INFO=1
 IF %LOG_LEVEL_ALL% EQU 1 SET LOG_LEVEL_WARN=1
 IF %LOG_LEVEL_ALL% EQU 1 SET LOG_LEVEL_ERROR=1
@@ -431,6 +433,16 @@ IF %LOG_LEVEL_ALL% EQU 1 SET LOG_LEVEL_TRACE=1
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: function Check for ALL log level!) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: USER
+::	user should be a domain user for everything to run properly
+ECHO.
+ECHO Checking user domain status... 
+(WHOAMI /FQDN 2> nul) && SET DOMAIN_USER_STATUS=1
+IF DEFINED DOMAIN_USER_STATUS GoTo skipD1
+(WHOAMI /FQDN 2> nul) || SET DOMAIN_USER_STATUS=0
+:skipD1
+
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :start
@@ -438,27 +450,30 @@ ECHO.
 ECHO Starting general information gathering...
 ECHO.
 ECHO Logs can be found here: %LOG_LOCATION%
-ECHO %SCRIPT_NAME% log file: %LOG_LOCATION%\%LOG_FILE%
+ECHO %SCRIPT_NAME% log file: %LOG_FILE%
 ECHO.
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: function Start!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: General Information...) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} was created!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt (
 	FOR /F "tokens=2-5 delims=()&" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO %%S%%T%%U%%V > %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
 	) && IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_TimeZone= < %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %var_TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	SCRIPT_BUILD: %SCRIPT_BUILD% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Minimum config file {%CONFIG_FILE_NAME%} version {%WPF_CONFIG_SCHEMA_VERSION_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
-whoami > "%LOG_LOCATION%\var\var_whoami.txt"
-IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_WHOAMI= < %LOG_LOCATION%\var\var_whoami.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
-IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\var\var_whoami_fqdn.txt
-IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami_fqdn.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
-IF EXIST %LOG_LOCATION%\var\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Script state
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} was created!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Computer Information
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
+:: Simple IP extraction --only works for 1 NIC
+FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IP.txt
+SET /P VAR_IP= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IP.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IP% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: fancy parsing for proper output of info
 IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
 	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt)
@@ -485,12 +500,24 @@ VER | FIND /I "Version 10." && (
 ver > %LOG_LOCATION%\var\var_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var\var_ver.txt) DO SET var_VER=%%V
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
+:: Computer Architecture
 FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\var\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
 IF "%COMPUTER_ARCHITECTURE%"=="x64" (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer meets the x64 computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "%COMPUTER_ARCHITECTURE%"=="x64" GoTo err04
+:: User Information
+whoami > "%LOG_LOCATION%\var\var_whoami.txt"
+IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_WHOAMI= < %LOG_LOCATION%\var\var_whoami.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
+IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\var\var_whoami_fqdn.txt
+IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami_fqdn.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
+IF EXIST %LOG_LOCATION%\var\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: General Information.) >> %LOG_LOCATION%\%LOG_FILE%
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: DEBUG OUTPUT FOR LOG SETTINGS
@@ -501,6 +528,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Log level ERROR is {%L
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Log level FATAL is {%LOG_LEVEL_FATAL%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Log level DEBUG is {%LOG_LEVEL_DEBUG%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Log level TRACE is {%LOG_LEVEL_TRACE%} >> %LOG_LOCATION%\%LOG_FILE%
+
 
 :: Misc. Variables ::
 :: RSAT Attempts
@@ -533,7 +561,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_
 ECHO %ISO_DATE% %TIME% [DEBUG]	S_hh: {%S_hh%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	S_mm: {%S_mm%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	S_ss: {%S_ss%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	S_mm: {%S_mm%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	S_ms: {%S_ms%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_NETLOGON: {%AD_NETLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCO_META_PACKAGE_LIST: {%CHOCO_META_PACKAGE_LIST%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -616,6 +644,12 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA256 Checker... >> %LOG_LOCATION%\%LOG_FILE%
 IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% seed SHA256 match! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	%SCRIPT_NAME% seed SHA256 DO NOT match! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	SHA256 check is case sensitive; should be all lower case! >> %LOG_LOCATION%\%LOG_FILE%
+IF "%WPF_SHA256%"=="%WPF_SHA256_CHECK%" GoTo skipSHAch
+SET SHA256_LOWER=0
+FOR %%A IN (a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z) DO (ECHO %WPF_SHA256% | FINDSTR /R /C:"%%A") && (SET SHA256_LOWER=1)
+IF %SHA256_LOWER% EQU 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	%SCRIPT_NAME% SHA256 is not lower case! >> %LOG_LOCATION%\%LOG_FILE%
+:skipSHAch
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Checker. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -665,7 +699,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(2) Get the Seed Drive Volume
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {2}: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [2]: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]...
 ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
@@ -680,18 +714,18 @@ IF NOT EXIST %SEED_DRIVE_VOLUME% ECHO No seed drive found!
 IF EXIST %LOG_LOCATION%\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {2}: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [2]: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(3)	Update seed location from Seed Drive
 ::		this must include the host file database
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {3}: update seed location if seed drive found... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [3]: update seed location if seed drive found... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Seed location: %POST_FLIGHT_DIR%
 ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
-IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
+IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -700,11 +734,11 @@ IF %ROBO_SEED_CODE% LEQ 3 ECHO Seed location [%POST_FLIGHT_DIR%] just got update
 IF %ROBO_SEED_CODE% GTR 7 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Seed location {%POST_FLIGHT_DIR%} failed to update!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to update!
 :jump3
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {3}: update seed location if seed drive found. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [3]: update seed location if seed drive found. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(4) Wireless Network Connection
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {4}: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Not configured for wireless network! >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 GoTo jump4W
 IF %WIRELESS_SETUP% EQU 1 (netsh wlan add profile filename=%POST_FLIGHT_DIR%\%WIRELESS_PROFILE_FILENAME% interface=%WIRELESS_CONFIG_INTERFACE% user=all)
@@ -713,7 +747,7 @@ IF %WIRELESS_SETUP% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=%
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Connected to a wireless network {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_CONNECTION_ERROR% GTR 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Failed to connect to the wireless network {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
 :jump4W
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {4}: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(5) NETDOM
@@ -721,7 +755,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 ::	not present until proven otherwise
 Echo Checking for NETDOM presence...
 ECHO.
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {5}: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [5]: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Checking for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
 SET NETDOM_PRESENCE=0
 (NETDOM HELP) && (SET NETDOM_PRESENCE=1)
@@ -731,11 +765,11 @@ IF %NETDOM_ERROR% EQU 9009 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WAR
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 0 ECHO NETDOM is NOT present!
 IF %NETDOM_PRESENCE% EQU 1 ECHO NETDOM is present!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {5}: checking if NETDOM is present. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [5]: checking if NETDOM is present. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(6) Password Files
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {6}: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Checking for password files...
 ECHO.
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -749,31 +783,33 @@ IF "%NETDOM_PASSWORDD%"=="*" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [
 	IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% SET /P NETDOM_PASSWORDD= < %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%)
 IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% ECHO Domain join user password file [%NETDOM_USERD_PW_FILE%] not found!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {6}: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(7) HOST DATABASE
 Echo Checking for host database...
 ECHO.
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {7}: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [7]: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database found!
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% ECHO Host database not found!
 IF EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Host database found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Host database NOT found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {7}: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [7]: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	(8) Chocolatey
 Echo Checking for Chocolatey...
 ECHO.
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check {8}: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey Meta check appears to have already run!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt GoTo jump8
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Meta Dependency Check {8}: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ChocolateyInstall GoTO jump8
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 ::	Chocolatey First time install
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Attempting first time Chocolatey install... >> %LOG_LOCATION%\%LOG_FILE%
@@ -1079,10 +1115,10 @@ GoTo fmac
 :: FUNCTION	GET MAC Address
 :: Getting the Host MAC Address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION GETMAC >> %LOG_LOCATION%\%LOG_FILE%
-GETMAC > %LOG_LOCATION%\Host_MAC.txt || GoTo err31
+GETMAC > %LOG_LOCATION%\var\var_Host_MAC.txt || GoTo err31
 ::	search the getmac file & set mac based on mac database
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
-FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\Host_MAC.txt) DO FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% && SET HOST_MAC=%%G
+FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\var\var_Host_MAC.txt) DO FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% && SET HOST_MAC=%%G
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	HOST_MAC: %HOST_MAC% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Computer MAC: %HOST_MAC%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION GETMAC >> %LOG_LOCATION%\%LOG_FILE%
@@ -1125,9 +1161,9 @@ SET HOST_STRING=%COMPUTERNAME%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Hostname already set to {%COMPUTERNAME%} matching {%HOST_STRING%} from host file:{%HOST_FILE_DATABASE%]} >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname already set {%COMPUTERNAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Hostname already set [%COMPUTERNAME%]!
-IF EXIST %LOG_LOCATION%\Host_MAC.txt TYPE %LOG_LOCATION%\Host_MAC.txt >> %PROCESS_3_FILE_NAME% && del /F /Q %LOG_LOCATION%\Host_MAC.txt
+IF EXIST %LOG_LOCATION%\var\var_Host_MAC.txt TYPE %LOG_LOCATION%\var\var_Host_MAC.txt >> %PROCESS_3_FILE_NAME% && del /F /Q %LOG_LOCATION%\var\var_Host_MAC.txt
 IF EXIST %LOG_LOCATION%\MAC-2-HOST.txt TYPE %LOG_LOCATION%\MAC-2-HOST.txt >> %PROCESS_3_FILE_NAME% && del /F /Q %LOG_LOCATION%\MAC-2-HOST.txt
-IF NOT EXIST %LOG_LOCATION%\Host_MAC.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File Host_MAC.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\var\var_Host_MAC.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File var\var_Host_MAC.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\MAC-2-HOST.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File MAC-2-HOST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
@@ -1502,9 +1538,9 @@ IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (IF %LOG_L
 :: Text file cleanup when everything is complete
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log)
 IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
-     IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
-	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
-IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+     IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
+	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
+IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [updated_POST-FLIGHT-SEED.log] deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump4! >> %LOG_LOCATION%\%LOG_FILE%
 :: Process Registry Sub-Routine
@@ -1556,10 +1592,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Ending for comp
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
 IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION {%LOG_LOCATION%\var} has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
-IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
 IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
-IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED_%SCRIPT_VERSION%.log
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 ::  Seed location cleanup
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Leaving SEED LOCATION contents!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1873,7 +1909,7 @@ FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET E_ms=%%h
 IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_hh: %E_hh%) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_mm: %E_mm%) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_ss: %E_ss%) >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_mm: %E_mm%) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_ms: %E_ms%) >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Calculate the actual lapse time
 IF %E_hh% GEQ %S_hh% (SET /A "L_hh=%E_hh%-%S_hh%") ELSE (SET /A "L_hh=%S_hh%-%E_hh%")
@@ -1894,6 +1930,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end tim
 :EOF
 :: END OF FILE
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt ECHO Windows Post Flight is running: %ISO_DATE% %TIME% > %LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1906,7 +1943,8 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %DOMAIN_USER_STATUS% EQU 1 IF
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF %DOMAIN_USER_STATUS% EQU 1 IF DEFINED LOG_SHIPPING_LOCATION IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF %DOMAIN_USER_STATUS% EQU 1 IF DEFINED LOG_SHIPPING_LOCATION COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%"
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
-ENDLOCAL
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt" DEL /F /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt"
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
+ENDLOCAL
 TIMEOUT 30
 EXIT

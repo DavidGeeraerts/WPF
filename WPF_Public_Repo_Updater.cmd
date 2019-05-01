@@ -23,7 +23,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Public_Repo_Updater
-SET Version=1.0.0
+SET Version=1.1.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 1A
@@ -39,6 +39,7 @@ mode con:lines=50
 :: Default Flash Drive Volume
 SET "WPF_PUBLIC_REPO=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight\Public"
 SET "WPF_DEV_REPO=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight"
+SET "WUC=D:\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
 ::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
@@ -73,6 +74,10 @@ ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" README.md /R:2 /W:5
 ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" LICENSE.md /R:2 /W:5
 :: Default Diskpart
 ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" DiskPart_Hard_Drive_Config.txt /R:2 /W:5
+:: Change Log
+ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Changelog.md /R:2 /W:5
+:: Windows Ultimate Template
+ROBOCOPY "%WUC%" "%WPF_PUBLIC_REPO%" Windows_Ultimate_Template.cmd /R:2 /W:5
 
 dir /A:-D /O-D "%WPF_PUBLIC_REPO%"
 
