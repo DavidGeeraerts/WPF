@@ -11,6 +11,31 @@
 - `Deprecated` for soon-to-be removed features.
 
 ---
+## Version 3.2.0 2019-05-01
+#### Added
+- Get IP
+- Script is running file
+- Script Build for dev (avoid collision)
+
+#### Changed
+- Order of collected general information in log
+- Order for domain user check
+
+#### Fixed
+- If debugger is set, not to delete seed location.
+- Typos for lapse time
+
+#### Removed
+- mode line numbers
+
+#### Security
+- SHA256 check for all lower case
+
+
+
+
+
+---
 ## Version 3.1.0 2019-04-26
 #### Fixed
 - syntax error
