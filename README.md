@@ -18,6 +18,7 @@
 6.	Runs Windows Ultimate commandlet
 
 ## Minor Features
+- Create computer object in AD in specified OU
 - Configuration file
 - Log level control
 - Extensive logging

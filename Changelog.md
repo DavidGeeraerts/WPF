@@ -10,6 +10,33 @@
 - `Security` in case of vulnerabilities.
 - `Deprecated` for soon-to-be removed features.
 
+
+---
+## Version 3.3.0 2019-05-02
+#### Added
+- Add computer to specified OU in AD
+- AD OU in Config
+
+#### Changed
+- Log shipping now appends
+- Config Schema version 3.3.0
+- Debugger improved
+- MAC files now go to var
+
+#### Fixed
+- Process Complete 3 log file
+- Trace on Debugger
+
+#### Removed
+- Deleting the MAC files as individual files
+
+
+
+
+
+
+
+
 ---
 ## Version 3.2.0 2019-05-01
 #### Added
@@ -30,9 +57,6 @@
 
 #### Security
 - SHA256 check for all lower case
-
-
-
 
 
 ---
