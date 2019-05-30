@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.3.0
-SET SCRIPT_BUILD=145128
+SET SCRIPT_VERSION=3.4.0
+SET SCRIPT_BUILD=074033
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 Prompt WPF$G
@@ -60,7 +60,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.3.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.4.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -155,7 +155,7 @@ SET SEED_LOCATION_CLEANUP=1
 SET CHOCOLATEY_ADVANCED=1
 ::  the list should be in a hierchical order
 ::  once a match is found  it will be applied
-SET "CHOCO_META_PACKAGE_LIST=Universal"
+SET CHOCO_META_PACKAGE_LIST=Universal
 
 :: LOGGING LEVEL CONTROL
 ::  by default, ALL=0 & TRACE=0
@@ -166,6 +166,13 @@ SET LOG_LEVEL_ERROR=1
 SET LOG_LEVEL_FATAL=1
 SET LOG_LEVEL_DEBUG=0
 SET LOG_LEVEL_TRACE=0
+
+
+:: DEBUG Mode
+:: Turn on debugging regardless of host
+:: 0 = OFF (NO)
+:: 1 = ON (YES)
+SET DEBUG_MODE=0
 
 :: To cleanup or Not to cleanup, var folder
 ::  0 = OFF (NO)
@@ -371,6 +378,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_DEBUG" "%~dp0\%CONFI
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_TRACE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_TRACE=%%V"
 ::   VAR_CLEANUP
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"VAR_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "VAR_CLEANUP=%%V"
+:: DEBUG_MODE
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DEBUG_MODE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "DEBUG_MODE=%%V"
 :: DEBUGGER
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DEBUGGER" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "DEBUGGER=%%V"
 ::   RSAT_PACKAGE_W10x64
@@ -407,6 +416,19 @@ IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
+:: DEBUG MODE
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debug Mode...) >> %LOG_LOCATION%\%LOG_FILE%
+IF %DEBUG_MODE% EQU 0 GoTo skipDM
+IF NOT DEFINED DEBUG_MODE GoTo skipDM
+IF %DEBUG_MODE% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Debug Mode is turned on! >> %LOG_LOCATION%\%LOG_FILE%
+IF %DEBUG_MODE% EQU 1 (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LEVEL_ALL: {%LOG_LEVEL_ALL%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
+:skipDM
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debug Mode.) >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	DEBUGGER
 :: Computer used for debugging so that automatic ALL logging is on
@@ -414,6 +436,7 @@ IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger...) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 GoTo skipDebug
 IF NOT DEFINED DEBUGGER GoTo skipDebug
+IF %DEBUG_MODE% EQU 1 GoTo skipDebug
 hostname | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
 IF %LOG_LEVEL_ALL% EQU 1 IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 GoTo skipDebug
@@ -427,7 +450,7 @@ IF /I %HOST_STRING%==%DEBUGGER% (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && 
 IF /I %HOST_STRING%==%DEBUGGER% IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
 
 :skipDebug
-IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -569,6 +592,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA 256 Check. >
 :: Start of variable debug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
+ECHO %ISO_DATE% %TIME% [DEBUG]	###############################################
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is alpha-numeric sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	S_hh: {%S_hh%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -584,6 +608,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCO_PACKAGE_LIST_LOCATION: {%CHOCO_PA
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCO_PACKAGE_LIST_FILE: {%CHOCO_PACKAGE_LIST_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: COMPUTER_ARCHITECTURE: {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CONFIG_FILE_NAME: {%CONFIG_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEBUG_MODE: {%DEBUG_MODE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEBUGGER: {%DEBUGGER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEFAULT_HOSTNAME: {%DEFAULT_HOSTNAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DEFAULT_USER: {%DEFAULT_USER%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -648,7 +673,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR: {%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR: {%WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
-
+ECHO %ISO_DATE% %TIME% [DEBUG]	###############################################
 :varE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -702,7 +727,7 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on meta dependen
 ::	(1) Is everything already done?
 Echo Checking to see if everything is already done...
 ECHO.
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[1] Checking to see if everything is already done? >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: to see if everything is already done? >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [1]: for Everything Already Done... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like everything is already done! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo err100
@@ -716,7 +741,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [2]: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]...
 ECHO.
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
 DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
 FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\FOUND_SEED_DRIVE.txt
@@ -737,7 +762,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Chec
 ECHO Seed location: %POST_FLIGHT_DIR%
 ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
 IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
@@ -755,6 +780,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Not configured for wireless network! >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 GoTo jump4W
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: Wireless configuration. >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 1 (netsh wlan add profile filename=%POST_FLIGHT_DIR%\%WIRELESS_PROFILE_FILENAME% interface=%WIRELESS_CONFIG_INTERFACE% user=all)
 SET WIRELESS_CONNECTION_ERROR=%ERRORLEVEL%
 IF %WIRELESS_SETUP% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=%WIRELESS_CONFIG_SSID% interface=%WIRELESS_CONFIG_INTERFACE%)
@@ -770,7 +796,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 Echo Checking for NETDOM presence...
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [5]: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Checking for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
 SET NETDOM_PRESENCE=0
 (NETDOM HELP) && (SET NETDOM_PRESENCE=1)
 SET NETDOM_ERROR=%ERRORLEVEL%
@@ -1175,8 +1201,8 @@ SET HOST_STRING=%COMPUTERNAME%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Hostname already set to {%COMPUTERNAME%} matching {%HOST_STRING%} from host file:{%HOST_FILE_DATABASE%]} >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname already set {%COMPUTERNAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Hostname already set [%COMPUTERNAME%]!
-IF EXIST %LOG_LOCATION%\var\var_Host_MAC.txt TYPE %LOG_LOCATION%\var\var_Host_MAC.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
-IF EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt TYPE %LOG_LOCATION%\var\MAC-2-HOST.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
+IF EXIST %LOG_LOCATION%\var\var_Host_MAC.txt (TYPE %LOG_LOCATION%\var\var_Host_MAC.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
+IF EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt (TYPE %LOG_LOCATION%\var\MAC-2-HOST.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1634,8 +1660,8 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %VAR_CLEANUP% EQU 1 IF EXIST 
 IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION {%LOG_LOCATION%\var} has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
-IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
-IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
+IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
+IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 ::  Seed location cleanup
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%

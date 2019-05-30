@@ -1,5 +1,6 @@
 # Changelog project: Windows Post Flight
-# The Windows Autopilot Doppelganger.
+(***The Windows Autopilot Doppelganger.***)
+
 ---
 
 ## Features Heading
@@ -9,6 +10,21 @@
 - `Removed` for now removed features.
 - `Security` in case of vulnerabilities.
 - `Deprecated` for soon-to-be removed features.
+
+
+---
+## Version 3.4.0 2019-05-30
+#### Added
+- Variable debug separator in log file
+- PW files deletion controlled by DEBUG_MODE
+
+#### Changed
+- Wording for dependency checks in log file
+
+#### Fixed
+- Log output for PROCESS_3_FILE_NAME
+
+
 
 
 ---
@@ -29,12 +45,6 @@
 
 #### Removed
 - Deleting the MAC files as individual files
-
-
-
-
-
-
 
 
 ---
