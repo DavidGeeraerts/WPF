@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.4.0
-SET SCRIPT_BUILD=074033
+SET SCRIPT_VERSION=3.4.1
+SET SCRIPT_BUILD=090138
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 Prompt WPF$G
@@ -592,7 +592,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA 256 Check. >
 :: Start of variable debug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
-ECHO %ISO_DATE% %TIME% [DEBUG]	###############################################
+ECHO %ISO_DATE% %TIME% [DEBUG]	-----------------------------------------------
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is alpha-numeric sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	S_hh: {%S_hh%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -673,7 +673,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MINOR: {%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR: {%WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	###############################################
+ECHO %ISO_DATE% %TIME% [DEBUG]	-----------------------------------------------
 :varE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -798,8 +798,8 @@ ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [5]: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
 SET NETDOM_PRESENCE=0
+(NETDOM HELP) & (SET NETDOM_ERROR=%ERRORLEVEL%) 
 (NETDOM HELP) && (SET NETDOM_PRESENCE=1)
-SET NETDOM_ERROR=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	NETDOM RETURNED ERROR: %NETDOM_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_ERROR% EQU 9009 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	RSAT (NETDOM) is not installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is present!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -870,7 +870,7 @@ GoTo autoSU
 ::	Either use DISM or try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present for older versions of Windows 10 1803 or older.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {9}: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
-IF %RSAT_ATTEMPT% EQU 2 GoTo err01
+IF %RSAT_ATTEMPT% EQU 3 GoTo err01
 
 ECHO Attempting to install RSAT [NETDOM]...
 ECHO.
@@ -894,10 +894,11 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: DISM NETDOM inst
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: NETDOM installation via package... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt) ELSE (
 	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
+IF EXIST "%LOG_LOCATION%\var\var_NETDOM_INSTALL.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_NETDOM_INSTALL.txt} just got created. >> %LOG_LOCATION%\%LOG_FILE% 
 IF EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package {%NETDOM_INSTALL%} was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt GoTo start
+IF DEFINED NETDOM_INSTALL IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package {%NETDOM_INSTALL%} was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED NETDOM_INSTALL (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED NETDOM_INSTALL GoTo err01
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the computer architecture {%COMPUTER_ARCHITECTURE%}... >> %LOG_LOCATION%\%LOG_FILE%
 FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt && (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package meets the {%COMPUTER_ARCHITECTURE%} computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -913,6 +914,7 @@ FIND /I "%var_WINDOWS_VERSION%" "%LOG_LOCATION%\var\var_NETDOM_INSTALL.txt" && (
 REM WILL NEED ERROR CATCHING FOR THE ABOVE TWO CONDITIONS
 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Trying to install:{%NETDOM_INSTALL%}... >> %LOG_LOCATION%\%LOG_FILE%
+echo.
 ECHO Installing NETDOM with this installer {%NETDOM_INSTALL%}...
 ECHO.
 ECHO (Computer will reboot after instalation!)
@@ -938,6 +940,7 @@ IF %NETDOM_PRESENCE% EQU 0 DIR %SYSTEMROOT%\SysWOW64 | FIND /I "netdom.exe" && S
 IF EXIST %SYSTEMROOT%\SysWOW64\netdom.exe SET "PATH=%PATH%;%SYSTEMROOT%\SysWOW64"
 IF %NETDOM_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR] NETDOM is still NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is now present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %RSAT_ATTEMPT% GEQ 2 GoTo err01
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: NETDOM installation via package. >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {9}: Remote Server Administrative Tools [NETDOM] check and installation. >> %LOG_LOCATION%\%LOG_FILE%
 GoTo autoSU
@@ -1167,7 +1170,6 @@ GoTo trap31
 :trap31
 :: Trap to catch if NETDOM is present or not
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_ATTEMPT% GEQ 2 GoTo err01
 IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
 GoTo fhost
 

@@ -12,6 +12,20 @@
 - `Deprecated` for soon-to-be removed features.
 
 
+
+
+---
+## Version 3.4.1 2019-08-06
+
+#### Changed
+- RSAT attempts to 3
+
+#### Fixed
+- RSAT Tools error handling for no msu on W10 1803 and older
+- RSAT logging
+- RSAT console output formatting
+
+
 ---
 ## Version 3.4.0 2019-05-30
 #### Added
@@ -23,8 +37,6 @@
 
 #### Fixed
 - Log output for PROCESS_3_FILE_NAME
-
-
 
 
 ---
