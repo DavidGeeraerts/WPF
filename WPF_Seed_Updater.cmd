@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=1.6.0
+SET Version=2.0.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -37,6 +37,9 @@ mode con:lines=50
 ::	All User variables are set within here.
 ::		(configure variables)
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: Master PC
+SET MASTER_PC=SC-Sphere
 
 :: Default Flash Drive Volume
 SET FLASH_DRIVE_VOLUME=F:
@@ -66,12 +69,24 @@ ECHO %DATE% %TIME%
 echo.
 echo Looking for a Flash drive with volume label: %FLASH_DRIVE_VOLUME_KEYWORD%
 echo.
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: Determine where running from: Master or elsewhere
+(hostname | find /I "%MASTER_PC%") && GoTo skipD
+SET "SEED_SOURCE_WPF=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows Post-Flight"
+SET "SEED_SOURCE_CHOCO=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Chocolatey"
+SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet"
+:skipD
+
+
 DIR %FLASH_DRIVE_VOLUME% | FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" && GoTo run
 :: IF NOT THE DEFAULT FLASH DRIVE VOLUME FIND IT
 SET FLASH_DRIVE_VOLUME=0
 FOR /F "tokens=* delims=:" %%F IN ('FSUTIL VOLUME LIST') DO DIR %%F | FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" && SET FLASH_DRIVE_VOLUME=%%F
 IF EXIST %FLASH_DRIVE_VOLUME% FOR /F "tokens=1 delims=\" %%P IN ("%FLASH_DRIVE_VOLUME%") DO SET FLASH_DRIVE_VOLUME=%%P
 IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_VOLUME% will be updated!)
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 
 :run
