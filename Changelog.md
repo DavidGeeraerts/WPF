@@ -15,6 +15,16 @@
 
 
 ---
+## Version 3.5.0 2019-08-15
+#### Added
+- DISM RSAT output into var file
+- RSAT check goes to nul
+
+#### Fixed
+- Chocolatey variable log output
+
+
+---
 ## Version 3.4.1 2019-08-06
 
 #### Changed
