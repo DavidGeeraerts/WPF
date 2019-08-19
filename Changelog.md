@@ -15,6 +15,13 @@
 
 
 ---
+## Version 3.5.1 2019-08-19
+#### Fixed
+- RUNNING_WPF file
+- Log shipping
+
+
+---
 ## Version 3.5.0 2019-08-15
 #### Added
 - DISM RSAT output into var file
