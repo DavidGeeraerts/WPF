@@ -36,10 +36,10 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.5.1
-SET SCRIPT_BUILD=131918
+SET SCRIPT_VERSION=3.5.2
+SET SCRIPT_BUILD=085248
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=80
+mode con:cols=70
 Prompt WPF$G
 color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -125,17 +125,17 @@ SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
 ::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
-SET PROCESS_1_FILE_NAME=RAN_Administrator_configured.txt
+SET PROCESS_1_FILE_NAME=Ran_Administrator_configured.txt
 :: Process 2: Process Disk condifuration
-SET PROCESS_2_FILE_NAME=RAN_DiskPart.txt
+SET PROCESS_2_FILE_NAME=Ran_DiskPart.txt
 :: Process 3: Change the hostname
-SET PROCESS_3_FILE_NAME=RAN_Hostname_Changed.txt
+SET PROCESS_3_FILE_NAME=Ran_Hostname_Changed.txt
 :: Process 4: Join a Windows Domain
-SET PROCESS_4_FILE_NAME=RAN_Domain_Joined.txt
+SET PROCESS_4_FILE_NAME=Ran_Domain_Joined.txt
 :: Process 5: Run Chocolatey
-SET PROCESS_5_FILE_NAME=RAN_Chocolatey.txt
+SET PROCESS_5_FILE_NAME=Ran_Chocolatey.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=RAN_Ultimate.txt
+SET PROCESS_6_FILE_NAME=Ran_Ultimate.txt
 
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
@@ -416,7 +416,7 @@ IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
-ECHO %ISO_DATE% %TIME% Windows Post Flight is running! > %LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt
+ECHO %ISO_DATE% %TIME% Windows Post Flight is running! > %LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%.txt
 
 :: DEBUG MODE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debug Mode...) >> %LOG_LOCATION%\%LOG_FILE%
@@ -735,7 +735,8 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %LOG_LEVEL_INFO% EQU 1 ECHO %
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo err100
 ECHO First run or a follow up run!
 ECHO.
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like a first run or a follow up run! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like a first time run! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Looks like a follow up run! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [1] for Everything Already Done. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1012,7 +1013,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap for Domain 
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_DOMAIN%\%NETDOM_USERD% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /F
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
-(FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt 2> nul) || IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Task Scheduler failed to set the domain user [%NETDOM_USERD%] for the task [%SCRIPT_NAME%]! >> %LOG_LOCATION%\%LOG_FILE%
+SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V || IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Task Scheduler failed to create task named {%SCRIPT_NAME%} with the domain user {%NETDOM_USERD%}! >> %LOG_LOCATION%\%LOG_FILE%
 :: If setting the domain account for the scheduled task fails resort back to STL
 :: This is failing and skipping the reboot
 :: FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
@@ -1379,12 +1380,16 @@ IF NOT EXIST %ChocolateyInstall%\choco.exe GoTo err50
 SET /P CHOCO_PACKAGE_RUN= < %CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%
 
 :: FUNCTION RUN Chocolatey
-ECHO %DATE% %TIME% %var_CHOCOLATEY% is running... >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
+ECHO %DATE% %TIME% %var_CHOCOLATEY% is running... >> %LOG_LOCATION%\Running_Chocolatey.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on Chocolatey package management... >> %LOG_LOCATION%\%LOG_FILE%
+ECHO. >> %LOG_LOCATION%\Running_Chocolatey.txt
+ECHO %CHOCO_PACKAGE_RUN% >> %LOG_LOCATION%\Running_Chocolatey.txt
 Choco upgrade %CHOCO_PACKAGE_RUN% /Y
 ECHO %DATE% %TIME%: %var_CHOCOLATEY% ran this package list {%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%}! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 Choco LIST --Local-Only >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% ran this package list {%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%}! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\Running_Chocolatey.txt" DEL /Q "%LOG_LOCATION%\Running_Chocolatey.txt"
+ECHO %DATE% %TIME% %var_CHOCOLATEY% completed package list install. >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 GoTo step6
 
 :skip5
@@ -2023,7 +2028,7 @@ IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
 :skipLS
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
-IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt" DEL /F /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt"
+IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%_%SCRIPT_BUILD%.txt" DEL /F /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%_%SCRIPT_VERSION%.txt"
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
 ENDLOCAL
 TIMEOUT 30

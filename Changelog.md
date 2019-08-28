@@ -15,6 +15,21 @@
 
 
 ---
+## Version 3.5.2 2019-08-28
+#### Added
+- Chocolatey Running file
+- Chocolatey Running file now contains package list
+
+#### Changed
+- Running WPF log name
+- RAN --> RAN
+
+#### Fixed
+- when scheduled task first created with domain user, reported error.
+- First time run or follow up run.
+
+
+---
 ## Version 3.5.1 2019-08-19
 #### Fixed
 - RUNNING_WPF file

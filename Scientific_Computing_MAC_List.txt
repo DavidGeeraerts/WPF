@@ -1,4 +1,4 @@
-# LAST-UPDATED: 2019-08-15
+# LAST-UPDATED: 2019-08-22
 
 # Server Production
 SC-Tellus	90-B1-1C-15-F4-F2
@@ -143,6 +143,7 @@ SC-GOWMAC-6	18-03-73-29-4F-7C
 SC-Research-01	5C-F9-DD-71-84-F7
 SC-Fungi-01	5C-F9-DD-71-89-20
 SC-Avian-01	5C-F9-DD-70-82-1B
+SC-EEON-01	E4-54-E8-57-C8-41
 
 # Standby (model-asset#)
 SC-7010-7306

@@ -319,6 +319,12 @@ Notes: The Evergreen State College
 			<RequiresUserInput>false</RequiresUserInput>
 			<CommandLine>F:\Windows_Post-Flight.cmd</CommandLine>
 			</SynchronousCommand>
+			<SynchronousCommand wcm:action="add">
+			<Order>6</Order>
+			<Description>Windows Post Flight Start</Description>
+			<RequiresUserInput>false</RequiresUserInput>
+			<CommandLine>G:\Windows_Post-Flight.cmd</CommandLine>
+			</SynchronousCommand>
 	</FirstLogonCommands>
 <TimeZone>Pacific Standard Time</TimeZone>
 </component>
