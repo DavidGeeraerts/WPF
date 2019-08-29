@@ -15,6 +15,15 @@
 
 
 ---
+## Version 3.5.3 (2019-08-29)
+#### Changed
+- minor formatting
+
+#### Fixed
+- WPF running file not deleted when run ends
+
+
+---
 ## Version 3.5.2 2019-08-28
 #### Added
 - Chocolatey Running file
