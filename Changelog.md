@@ -15,6 +15,17 @@
 
 
 ---
+## Version 3.6.0 (2019-09-18)
+#### Added
+- WPF Run ID
+- Calculated total lapse time.
+#### Changed
+- Ultimate file to Windows Ultimate as default
+- DISM RSAT log no longer in var folder, but in main log.
+- DISM RSAT log goes in completed log.
+
+
+---
 ## Version 3.5.3 (2019-08-29)
 #### Changed
 - minor formatting
