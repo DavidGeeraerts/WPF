@@ -15,6 +15,16 @@
 
 
 ---
+## Version 3.6.1 (2019-09-19)
+#### Changed
+- Some logging output to be more consistent
+#### Fixed
+- WPF total lapse time
+#### Changed
+- Process files default names
+
+
+---
 ## Version 3.6.0 (2019-09-18)
 #### Added
 - WPF Run ID
