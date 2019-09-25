@@ -35,11 +35,12 @@ SETLOCAL Enableextensions
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SET SCRIPT_NAME=Windows_Post-Flight
-SET SCRIPT_VERSION=3.6.1
-SET SCRIPT_BUILD=123745
+SET SCRIPT_NAME=Windows-Post-Flight
+SET SCRIPT_VERSION=4.0.2
+SET SCRIPT_BUILD=105555
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=70
+mode con:cols=80
+mode con:lines=50
 Prompt WPF$G
 color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -68,13 +69,13 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :: Working Directory for Post-Flight
 ::  this is also the (local storage) seed location for Post-Flight
 SET "POST_FLIGHT_DIR=%ProgramData%\TESC\%SCRIPT_NAME%"
-SET "POST_FLIGHT_CMD_NAME=Windows_Post-Flight.cmd"
+SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight.cmd"
 
 :: Log Files Settings
 ::  Main script log file
 :: %LOG_LOCATION%\%LOG_FILE%
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
-SET LOG_FILE=Windows_Post-Flight.Log
+SET LOG_FILE=Windows-Post-Flight.Log
 
 :: Seed Drive
 ::  provide the label for the seed drive
@@ -125,17 +126,19 @@ SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
 ::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
-SET PROCESS_1_FILE_NAME=Administrator_configured.txt
+SET PROCESS_1_FILE_NAME=Process_Administrator.txt
 :: Process 2: Process Disk condifuration
-SET PROCESS_2_FILE_NAME=DiskPart.txt
+SET PROCESS_2_FILE_NAME=Process_DiskPart.txt
 :: Process 3: Change the hostname
-SET PROCESS_3_FILE_NAME=Hostname_Changed.txt
+SET PROCESS_3_FILE_NAME=Process_Hostname_Change.txt
 :: Process 4: Join a Windows Domain
-SET PROCESS_4_FILE_NAME=Domain_Joined.txt
+SET PROCESS_4_FILE_NAME=Process_Domain_Join.txt
 :: Process 5: Run Chocolatey
-SET PROCESS_5_FILE_NAME=Chocolatey.txt
+SET PROCESS_5_FILE_NAME=Process_Chocolatey.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=Windows_Ultimate.txt
+SET PROCESS_6_FILE_NAME=Process_Windows_Ultimate.txt
+:: Process 6: Run Ultimate script
+SET PROCESS_7_FILE_NAME=Process_Windows_Update.txt
 
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
@@ -183,8 +186,8 @@ SET VAR_CLEANUP=1
 ::  (possible future expansion)
 ::  check against this number of actions
 ::   default is 6
-::   {(1)Disk Configuration; (2)Hostname change; (3)Local Administrator; (4)Join a domain; (5)run Chocolatey, (6)run Ultimate script}
-SET PROCESS_CHECK_NUMBER=6
+::   {(1)Disk Configuration; (2)Hostname change; (3)Local Administrator; (4)Join a domain; (5)run Chocolatey, (6)run Ultimate script, (7) Windows Update}
+SET PROCESS_CHECK_NUMBER=7
 
 
 :: Miscellaneous
@@ -203,11 +206,7 @@ SET PROCESS_CHECK_NUMBER=6
 :fsTime
 :: FUNCTION: Start Time
 :: Calculate lapse time by capturing start time
-::	Parsing %TIME% variable to get an interger number
-FOR /F "tokens=1 delims=:." %%h IN ("%TIME%") DO SET S_hh=%%h
-FOR /F "tokens=2 delims=:." %%h IN ("%TIME%") DO SET S_mm=%%h
-FOR /F "tokens=3 delims=:." %%h IN ("%TIME%") DO SET S_ss=%%h
-FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET S_ms=%%h
+SET START_TIME=%Time%
 ::	variables are debugged in the DEBUGER section
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -411,8 +410,7 @@ IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	ALL logging is turned o
 IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 
 :: Now that logging is configured, move some temp var files
-COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var"
-IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
@@ -601,10 +599,8 @@ IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
 ECHO %ISO_DATE% %TIME% [DEBUG]	-------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is alpha-numeric sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	S_hh: {%S_hh%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	S_mm: {%S_mm%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	S_ss: {%S_ss%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	S_ms: {%S_ms%} >> %LOG_LOCATION%\%LOG_FILE%
+
+
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_NETLOGON: {%AD_NETLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_COMPUTER_OU: {%AD_COMPUTER_OU%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -647,8 +643,10 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_3_FILE_NAME: {%PROCESS_3_FILE_N
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_4_FILE_NAME: {%PROCESS_4_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_5_FILE_NAME: {%PROCESS_5_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_6_FILE_NAME: {%PROCESS_6_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_7_FILE_NAME: {%PROCESS_7_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_COMPLETE_FILE: {%PROCESS_COMPLETE_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_CHECK_NUMBER: {%PROCESS_CHECK_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_INCOMPLETE_FILE: {INCOMPLETE_%SCRIPT_NAME%.log} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REPO_SHA256_URI: {%REPO_SHA256_URI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REQUIRE_REPO_SHA256_CHECK: {%REQUIRE_REPO_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64: {%RSAT_PACKAGE_W10x64%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -656,6 +654,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: START_TIME: {%START_TIME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -1400,7 +1399,7 @@ GoTo step6
 :skip5
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip5 >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_5_FILE_NAME% Choco LIST --local-only >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% has already been run! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CHOCOLATEY has already been run! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step6
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1433,12 +1432,63 @@ IF EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% CALL :subr2
 :jump2
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump2 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file [%ULTIMATE_FILE_NAME%] ran!) >> %LOG_LOCATION%\%LOG_FILE%
-GoTo end
+GoTo step7
 
 :skip6
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip6 >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%LOG_FILE%
+
+:://///////////////////////////////////////////////////////////////////////////
+:step7
+:: Process Windows updated via powershell
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 >> %LOG_LOCATION%\%LOG_FILE%
+ECHO Step 7: Working on processing Windows updates...
+
+:trap7
+:: TRAP7 is to catch if all Windows updates have already run
+:: this should be based off of a txt file generated by checking Windows update Get-WindowsUpdate
+IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" GoTo skip7
+:trap7.1
+:: Check to make sure powershell exist
+::	this should go to an error
+::	if this file exists, check already happened
+IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo fWUP
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skip7
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PowerShell checks out based on global variable PSMODULEPATH >> %LOG_LOCATION%\%LOG_FILE%
+
+:fWUP
+:: FUNCTION Windows Update via PowerShell
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %DATE%%TIME%	START... >> %LOG_LOCATION%\Windows_Update_Powershell.log
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Prcessing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
+@powershell Install-PackageProvider -name NuGet -Force
+@powershell Install-Module -name PSWindowsUpdate -Force
+ECHO List of updates: >> %LOG_LOCATION%\Windows_Update_Powershell.log
+ECHO ########################################################################## >> %LOG_LOCATION%\Windows_Update_Powershell.log
+@powershell Get-WindowsUpdate >> %LOG_LOCATION%\Windows_Update_Powershell.log
+ECHO ########################################################################## >> %LOG_LOCATION%\Windows_Update_Powershell.log
+ECHO. >> %LOG_LOCATION%\Windows_Update_Powershell.log
+:: If nothing to do skip install
+@powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || ECHO %DATE%%TIME%	Finnished Windows Updates >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+@powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || GoTo skip7
+
+@powershell Install-WindowsUpdate -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
+@powershell Get-WURebootStatus -Silent  | (FIND /I "True") && IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Windows updates requires a reboot! Rebooting! >> %LOG_LOCATION%\%LOG_FILE%
+@powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (shutdown -r -t 20) & (GoTo feTime)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
+
+:skip7
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip7 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF NOT EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" (Type %LOG_LOCATION%\Windows_Update_Powershell.log >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%)
+IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" DEL /Q /F "%LOG_LOCATION%\Windows_Update_Powershell.log"
+IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% ECHO %DATE% %TIME% Windows update via PowerShell has already run! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows update via PowerShell has already run! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: skip7 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Completed prcessing Windows Updates via PowerShell >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 >> %LOG_LOCATION%\%LOG_FILE%
+:://///////////////////////////////////////////////////////////////////////////
+
 GoTo end
 
 
@@ -1590,8 +1640,10 @@ IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% SET /A PROCESS_COUNT+=1
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% SET /A PROCESS_COUNT+=1
 IF EXIST %LOG_LOCATION%\%PROCESS_5_FILE_NAME% SET /A PROCESS_COUNT+=1
 IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% SET /A PROCESS_COUNT+=1
+IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% SET /A PROCESS_COUNT+=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Process Count: %PROCESS_COUNT% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Process Check Number: %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
+IF %DEBUG_MODE% EQU 1 GoTo skipPFD
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% (Type %LOG_LOCATION%\%PROCESS_1_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_1_FILE_NAME% && (
 	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_1_FILE_NAME% file just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1610,16 +1662,32 @@ IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% (Type %LOG_LOCATION%\%PROCESS_6_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_6_FILE_NAME% && (
 	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_6_FILE_NAME% file just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% (Type %LOG_LOCATION%\%PROCESS_7_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_7_FILE_NAME% && (
+	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_7_FILE_NAME% file just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+
+:skipPFD
+IF %DEBUG_MODE% EQU 0 GoTo skipDBM
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_1_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_2_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_3_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_4_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_5_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_6_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_7_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Process files added to {%PROCESS_COMPLETE_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
+:skipDBM
+
 :: Logging output for COMPLETE OR INCOMPLETE
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_COMPLETE_FILE% just got created!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Post-Flight completed %PROCESS_COUNT% tasks!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% ECHO %DATE% %TIME% POST-FLIGH is INCOMPLETE! Check main log [%LOG_FILE%] for details! >> %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG] {INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log} just got created!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	POST-FLIGH is INCOMPLETE!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% ECHO %DATE% %TIME% POST-FLIGH is INCOMPLETE! Check main log [%LOG_FILE%] for details! >> %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log
+IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {INCOMPLETE_%SCRIPT_NAME%.log} just got created!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	POST-FLIGH is INCOMPLETE!) >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Text file cleanup when everything is complete
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log DEL /F /Q %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log)
-IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log DEL /F /Q %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log)
+IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (
      IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
 	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {updated_POST-FLIGHT-SEED.log} deleted!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1635,10 +1703,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Jump4! >> %LOG_L
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
 :: cleanup the scheduled task
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
-     IF EXIST %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)) && DEL /F /Q %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
-IF NOT EXIST %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {TASK_SCHEDULER_%SCRIPT_NAME%.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+     IF EXIST %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)) && DEL /F /Q %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt
+IF NOT EXIST %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {Task_scheduler_%SCRIPT_NAME%.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
+IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Cleanup the domain user that was added to local Administrators group
@@ -1978,37 +2046,26 @@ GoTo endc
 :: END ERROR SECTION
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :feTime
 :: FUNCTION: End Time
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION end time >> %LOG_LOCATION%\%LOG_FILE%
-
 :: Calculate lapse time by capturing end time
-::	Parsing %TIME% variable to get an interger number
-FOR /F "tokens=1 delims=:." %%h IN ("%TIME%") DO SET E_hh=%%h
-FOR /F "tokens=2 delims=:." %%h IN ("%TIME%") DO SET E_mm=%%h
-FOR /F "tokens=3 delims=:." %%h IN ("%TIME%") DO SET E_ss=%%h
-FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET E_ms=%%h
-IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_hh: %E_hh%) >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_mm: %E_mm%) >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_ss: %E_ss%) >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	E_ms: %E_ms%) >> %LOG_LOCATION%\%LOG_FILE%
+SET END_TIME=%TIME%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: END_TIME: %END_TIME% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end time >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Calculate the actual lapse time
-IF %E_hh% GEQ %S_hh% (SET /A "L_hh=%E_hh%-%S_hh%") ELSE (SET /A "L_hh=%S_hh%-%E_hh%")
-IF %E_mm% GEQ %S_mm% (SET /A "L_mm=%E_mm%-%S_mm%") ELSE (SET /A "L_mm=%S_mm%-%E_mm%")
-IF %E_ss% GEQ %S_ss% (SET /A "L_ss=%E_ss%-%S_ss%") ELSE (SET /A "L_ss=%S_ss%-%E_ss%")
-IF %E_ms% GEQ %S_ms% (SET /A "L_ms=%E_ms%-%S_ms%") ELSE (SET /A "L_ms=%S_ms%-%E_ms%")
-:: turn hours into minutes and add to total minutes
-IF %L_hh% GTR 0 SET /A "L_hhh=%L_hh%*60"
-IF %L_hh% EQU 0 SET L_hhh=0
-IF %L_hhh% GTR 0 SET /A "L_tm=%L_hhh%+%L_mm%"
-IF %L_hhh% EQU 0 SET L_tm=%L_mm%
-:: Lapse Time
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (mm:ss.ms): %L_tm%:%L_ss%.%L_ms% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end time >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION lapse time... >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skipPSLT
+@PowerShell.exe -c "$span=([datetime]'%End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var\var_Time_Lapse.txt
+IF EXIST %LOG_LOCATION%\var\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var\var_Time_Lapse.txt
+:skipPSLT
+:: Time Lapse 
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (hh:mm.ss): %TIME_LAPSE% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 :: Calculate the total time lapse
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Total lapse time... >> %LOG_LOCATION%\%LOG_FILE%
@@ -2016,31 +2073,39 @@ IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %LOG_LEVEL_TRACE% EQU 1 E
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo skipTLT
 SET VAR_TLT_SEC=0
 SET VAR_TLT_MIN=0
+SET VAR_TLT_HOU=0
 IF EXIST %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt DEL /Q /F %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt
 FOR /F "tokens=6 delims= " %%P IN ('find /I "Time Lapsed" "%LOG_LOCATION%\%LOG_FILE%"') DO ECHO %%P >> %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt
-IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_LAPSED_TIME.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
-FOR /F "tokens=2 delims=:." %%P IN ('type "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO SET /a VAR_TLT_SEC+=%%P
+IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_Total_Lapsed_Time.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "tokens=3 delims=:." %%P IN ('type "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO SET /a VAR_TLT_SEC+=%%P
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_TLT_SEC: {%VAR_TLT_SEC%} >> %LOG_LOCATION%\%LOG_FILE%
 SET /a VAR_SEC2MIN=VAR_TLT_SEC/60
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_SEC2MIN: {%VAR_SEC2MIN%} >> %LOG_LOCATION%\%LOG_FILE%
-FOR /F "tokens=1 delims=:." %%P IN ('type "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO SET /a VAR_TLT_MIN+=%%P
+FOR /F "tokens=2 delims=:" %%P IN ('type "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO SET /a VAR_TLT_MIN+=%%P
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_TLT_MIN: {%VAR_TLT_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
 SET /a WPF_TLT_MIN=%VAR_TLT_MIN%+%VAR_SEC2MIN%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_TLT_MIN: {%WPF_TLT_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total lapse time: %WPF_TLT_MIN% >> %LOG_LOCATION%\%LOG_FILE%
-IF %DEBUG_MODE% EQU 0 IF EXIST %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt DEL /Q /F %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt
-IF NOT EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_Total_Lapsed_Time.txt} just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+
+IF %WPF_TLT_MIN% GTR 60 (SET /a VAR_MIN2HOU=WPF_TLT_MIN/60) ELSE (SET VAR_MIN2HOU=0) 
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_MIN2HOU: {%VAR_MIN2HOU%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %VAR_MIN2HOU% GTR 1 SET /a WPF_TLT_MIN=WPF_TLT_MIN-(VAR_MIN2HOU*60)
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_TLT_MIN: {%WPF_TLT_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "tokens=1 delims=:" %%P IN ('type "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO SET /a VAR_TLT_HOU+=%%P
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_TLT_HOU: {%VAR_TLT_HOU%} >> %LOG_LOCATION%\%LOG_FILE%
+SET /a WPF_TLT_HOU=%VAR_TLT_HOU%+%VAR_MIN2HOU%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_TLT_HOU: {%WPF_TLT_HOU%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total time lapse (hh:mm): %WPF_TLT_HOU%:%WPF_TLT_MIN% >> %LOG_LOCATION%\%LOG_FILE%
 :skipTLT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION Total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 :EOF
 :: END OF FILE
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %DEBUG_MODE% EQU 0 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /Q /F "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
@@ -2049,13 +2114,11 @@ IF NOT DEFINED LOG_SHIPPING_LOCATION GoTo skipLS
 IF %DOMAIN_USER_STATUS% EQU 0 GoTo skipLS
 IF NOT EXIST "%LOG_LOCATION%\%LOG_FILE%" GoTo skipLS
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
-IF EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF EXIST "%LOG_SHIPPING_LOCATION%\%LOG_FILE%" (Type "%LOG_LOCATION%\%LOG_FILE%" >> "%LOG_SHIPPING_LOCATION%\%LOG_FILE%") ELSE (COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%")
+IF EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF EXIST "%LOG_SHIPPING_LOCATION%" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
 :: LOG SHIPPING even if incomplete
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
-IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%_%SCRIPT_VERSION%.log (
-	IF EXIST "%LOG_SHIPPING_LOCATION%\%LOG_FILE%" (Type %LOG_LOCATION%\%LOG_FILE% >> "%LOG_SHIPPING_LOCATION%\%LOG_FILE%")) ELSE (
-	COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%"
-	)
+IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
+IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
+IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
 :skipLS
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
