@@ -15,6 +15,22 @@
 
 
 ---
+## Version 4.0.2 (2019-09-25)
+#### Added
+- Windows updates via Powershell 
+#### Changed
+- Time lapse now processed by PowerShell
+- Name change to Windows-Post-Flight, keep separator consistent
+- Process files prepended with "Process_"
+#### Fixed
+- logging wording
+- shipping log file even if incomplete
+- WPF Total lapse time
+
+
+
+
+---
 ## Version 3.6.1 (2019-09-19)
 #### Changed
 - Some logging output to be more consistent
