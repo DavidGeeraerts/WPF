@@ -24,8 +24,8 @@ setlocal enableextensions
 
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
-SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=2.0.0
+SET Name=Windows-Post-Flight_Seed_Updater
+SET Version=2.1.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -91,8 +91,8 @@ IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_
 
 :run
 :: Main WPF commandlet and config file
-IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows_Post-Flight.cmd /R:2 /W:5
-IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows_Post-Flight.config /R:2 /W:5
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight.cmd /R:2 /W:5
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight.config /R:2 /W:5
 :: Windows Unattend.xml file
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" unattend.xml /R:2 /W:5
 :: Text files

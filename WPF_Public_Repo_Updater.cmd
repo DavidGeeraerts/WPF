@@ -63,11 +63,11 @@ echo.
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :run
 :: MAIN cmd
-ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Windows_Post-Flight.cmd /R:2 /W:5
+ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Windows-Post-Flight.cmd /R:2 /W:5
 :: Config file
 :: ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Windows_Post-Flight.config /R:2 /W:5
 :: SHA256
-ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Windows_Post-Flight_SHA256.txt /R:2 /W:5
+ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" Windows-Post-Flight_SHA256.txt /R:2 /W:5
 :: ReadMe
 ROBOCOPY "%WPF_DEV_REPO%" "%WPF_PUBLIC_REPO%" README.md /R:2 /W:5
 :: License
