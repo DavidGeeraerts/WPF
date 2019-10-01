@@ -15,6 +15,14 @@
 
 
 ---
+## Version 4.0.3 (2019-10-01)
+#### Fixed
+- RUNNING_ log file not getting deleted when done.
+- improved logging output
+
+
+
+---
 ## Version 4.0.2 (2019-09-25)
 #### Added
 - Windows updates via Powershell 
