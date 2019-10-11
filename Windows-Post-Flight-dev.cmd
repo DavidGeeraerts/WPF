@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.0.3
-SET SCRIPT_BUILD=140255
+SET SCRIPT_VERSION=4.1.0
+SET SCRIPT_BUILD=075951
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -68,7 +68,7 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 
 :: Working Directory for Post-Flight
 ::  this is also the (local storage) seed location for Post-Flight
-SET "POST_FLIGHT_DIR=%ProgramData%\TESC\%SCRIPT_NAME%"
+SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
 SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight.cmd"
 
 :: Log Files Settings
@@ -519,10 +519,15 @@ IF EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO 
 
 :: Computer Information
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
-:: Simple IP extraction --only works for 1 NIC
-FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IP.txt
-SET /P VAR_IP= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IP.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IP% >> %LOG_LOCATION%\%LOG_FILE%
+:: Future may need to use NETSH interface {ipv4/ipv6} show addresses
+:: Simple IPv4 extraction --only works for 1 NIC
+FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
+SET /P VAR_IPv4= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IPv4% >> %LOG_LOCATION%\%LOG_FILE%
+:: Simple IPv6 extraction --only works for 1 NIC
+FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
+SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: fancy parsing for proper output of info
 IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
@@ -598,8 +603,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Check. >>
 :: Start of variable debug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
-ECHO %ISO_DATE% %TIME% [DEBUG]	-------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is alpha-numeric sorted. >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	------------------------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is numeric-alpha sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
 
 
@@ -622,6 +627,8 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_DRIVE_VOLUME_LABEL: {%SEED_DRIVE_V
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE_LOCATION: {%HOST_FILE_DATABASE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE: {%HOST_FILE_DATABASE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ISO_DATE: {%ISO_DATE%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: IPv4: {%VAR_IPv4%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: IPv6:	{%VAR_IPv6%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOCAL_ADMIN_PW_FILE: {%LOCAL_ADMIN_PW_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LOCATION: {%LOG_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_FILE: {%LOG_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -655,7 +662,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64: {%RSAT_PACKAGE_W10
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: START_TIME: {%START_TIME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -681,7 +688,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_CONFIG_SCHEMA_VERSION_MIN_MAJOR: {%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_RUN_ID: {%WPF_RUN_ID%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_STAMP: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	-------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	------------------------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
 :varE
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -795,6 +802,16 @@ SET WIRELESS_CONNECTION_ERROR=%ERRORLEVEL%
 IF %WIRELESS_SETUP% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=%WIRELESS_CONFIG_SSID% interface=%WIRELESS_CONFIG_INTERFACE%)
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Connected to a wireless network {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_CONNECTION_ERROR% GTR 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Failed to connect to the wireless network {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
+::	may need a delay timer to give wireless a chance to connect
+:: Show IP's if connected
+:: Simple IPv4 extraction --only works for 1 NIC
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv4= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IPv4% >> %LOG_LOCATION%\%LOG_FILE%
+:: Simple IPv6 extraction --only works for 1 NIC
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
 :jump4W
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -851,14 +868,12 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 Echo Checking for Chocolatey...
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt GoTo jump8
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt (
+IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey Meta check appears to have already run!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt GoTo jump8
 IF DEFINED ChocolateyInstall GoTO jump8
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 ::	Chocolatey First time install
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Attempting first time Chocolatey install... >> %LOG_LOCATION%\%LOG_FILE%
@@ -867,9 +882,12 @@ ECHO.
 ::		attempt to install from Sub-Routine
 GoTo subr1
 
-
 :jump8
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump8 >> %LOG_LOCATION%\%LOG_FILE%
+:: jump to create a scheduled task
+GoTo autoSU
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :: jump to create a scheduled task
 GoTo autoSU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1360,9 +1378,9 @@ IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
 IF DEFINED CHOCO_PRESENCE IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CHOCO_PRESENCE {%CHOCO_PRESENCE%} >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	{%var_CHOCOLATEY%} is present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 GoTo err50
@@ -1504,11 +1522,16 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [su
 :: SETLOCAL ENABLEDELAYEDEXPANSION
 ::	Check for updates on Chocolatey webiste for installation:
 ::		https://chocolatey.org/install#install-with-cmdexe
+
+:: If there's no network connection to chocolatey.org, the commandlet will fail.
+::	Self-Preservation
+NSLOOKUP chocolatey.org > %LOG_LOCATION%\var\var_nslookup_Chocolatey.txt
+FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Chocolatey.txt" || GoTo err80
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_%SCRIPT_VERSION%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% installed for the first time successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Chocolatey failed to install for the first time!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% installed for the first time successfully!
@@ -2033,6 +2056,15 @@ IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting running the Ult
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error61 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
+:err80
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error80 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	No network connection to CHOCOLATEY site to download script! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting running Chocolatey package management! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	No network connection to Chocolatey site to download script! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error80 >> %LOG_LOCATION%\%LOG_FILE%
+:: GoTo try and run the next step (Windows Ultimate Commandlet)
+GoTo step6
+
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 100 (DONE)
 :err100
@@ -2097,6 +2129,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_TLT_HOU:
 SET /a WPF_TLT_HOU=%VAR_TLT_HOU%+%VAR_MIN2HOU%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_TLT_HOU: {%WPF_TLT_HOU%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total time lapse (hh:mm): %WPF_TLT_HOU%:%WPF_TLT_MIN% >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED WPF_TLT_HOU FOR /F "tokens=3 delims=:" %%P IN ('FIND /C ":" "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"') DO IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Total Reboots:%%P >> %LOG_LOCATION%\%LOG_FILE%
 :skipTLT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION Total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -2124,8 +2157,9 @@ IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" IF EXIST "%LOG_SHIPPING_L
 :skipLS
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
-IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /F /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
+:: Kill the running file
+IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
 ENDLOCAL
 TIMEOUT 30
 EXIT
