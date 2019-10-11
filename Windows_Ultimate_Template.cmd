@@ -101,10 +101,7 @@ SET VAR_CLEANUP=1
 
 :: Calculate lapse time by capturing start time
 ::	Parsing %TIME% variable to get an interger number
-FOR /F "tokens=1 delims=:." %%h IN ("%TIME%") DO SET S_hh=%%h
-FOR /F "tokens=2 delims=:." %%h IN ("%TIME%") DO SET S_mm=%%h
-FOR /F "tokens=3 delims=:." %%h IN ("%TIME%") DO SET S_ss=%%h
-FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET S_ms=%%h
+SET TIME_START=%Time%
 ::*****************************************************************************
 
 :: CONSOLE OUTPUT
@@ -150,26 +147,32 @@ IF DEFINED DOMAIN_USER_STATUS GoTo skipD1
 (WHOAMI /FQDN 2> nul) || SET DOMAIN_USER_STATUS=0
 ECHO.
 :skipD1
-
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-:fISO8601
-:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
-ECHO.
-ECHO Checking PowerShell...
-ECHO.
-IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skipPS
-IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion > %LOG_LOCATION%\var\var_PS_Version.txt
+
+:: Powershell CHECK
+ECHO Checking on Powershell...
+IF NOT DEFINED PSModulePath SET PS_STATUS=0 & GoTo skipPS
+IF DEFINED PSModulePath (@powershell $PSVersionTable.PSVersion > %LOG_LOCATION%\var\var_PS_Version.txt) && SET PS_STATUS=1
+IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo skipPSv
 FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
 FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
+:skipPSv
+
+:skipPS
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:fISO8601
+:: Function to ensure ISO 8601 Date format yyyy-mmm-dd
+IF %PS_STATUS% EQU 0 GoTo fmanualISO
 :: Easiest way to get ISO date
 @powershell Get-Date -format "yyyy-MM-dd" > %LOG_LOCATION%\var\var_ISO8601_Date.txt
 SET /P ISO_DATE= < %LOG_LOCATION%\var\var_ISO8601_Date.txt
-:skipPS
+
 
 :fmanualISO
-:: Manually create the ISO 8601 date format
+:: Manually create the ISO 8601 date format in case powershell not available
 IF DEFINED ISO_DATE GoTo skipfmiso
 FOR /F "tokens=2 delims=/ " %%T IN ("%DATE%") DO SET ISO_MONTH=%%T
 FOR /F "tokens=3 delims=/ " %%T IN ("%DATE%") DO SET ISO_DAY=%%T
@@ -177,7 +180,7 @@ FOR /F "tokens=4 delims=/ " %%T IN ("%DATE%") DO SET ISO_YEAR=%%T
 SET ISO_DATE=%ISO_YEAR%-%ISO_MONTH%-%ISO_DAY%
 
 :skipfmiso
-::*****************************************************************************
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :start
@@ -364,26 +367,22 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Variable [var] f
 :: Calculate lapse time
 :Time
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Time lapse end... >> %LOG_LOCATION%\%LOG_FILE%
-:: Calculate lapse time by capturing end time
-::	Parsing %ISO_DATE% %TIME% variable to get an interger number
-FOR /F "tokens=1 delims=:." %%h IN ("%TIME%") DO SET E_hh=%%h
-FOR /F "tokens=2 delims=:." %%h IN ("%TIME%") DO SET E_mm=%%h
-FOR /F "tokens=3 delims=:." %%h IN ("%TIME%") DO SET E_ss=%%h
-FOR /F "tokens=4 delims=:." %%h IN ("%TIME%") DO SET E_ms=%%h
-::
+:: capturing end time
+::	End Time
+SET TIME_END=%TIME%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: TIME_END: %TIME_END% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Calculate the actual lapse time
-IF %E_hh% GEQ %S_hh% (SET /A "L_hh=%E_hh%-%S_hh%") ELSE (SET /A "L_hh=%S_hh%-%E_hh%")
-IF %E_mm% GEQ %S_mm% (SET /A "L_mm=%E_mm%-%S_mm%") ELSE (SET /A "L_mm=%S_mm%-%E_mm%")
-IF %E_ss% GEQ %S_ss% (SET /A "L_ss=%E_ss%-%S_ss%") ELSE (SET /A "L_ss=%S_ss%-%E_ss%")
-IF %E_ms% GEQ %S_ms% (SET /A "L_ms=%E_ms%-%S_ms%") ELSE (SET /A "L_ms=%S_ms%-%E_ms%")
-:: turn hours into minutes and add to total minutes
-IF %L_hh% GTR 0 SET /A "L_hhh=%L_hh%*60"
-IF %L_hh% EQU 0 SET L_hhh=0
-IF %L_hhh% GTR 0 SET /A "L_tm=%L_hhh%+%L_mm%"
-IF %L_hhh% EQU 0 SET L_tm=%L_mm%
-:: Lapse Time
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (mm:ss.ms): %L_tm%:%L_ss%.%L_ms% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Time lapse end. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION lapse time >> %LOG_LOCATION%\%LOG_FILE%
+IF %PS_STATUS% EQU 0 GoTo skipPSLT
+@PowerShell.exe -c "$span=([datetime]'%Time_End%' - [datetime]'%Time_Start%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var\var_Time_Lapse.txt
+IF EXIST %LOG_LOCATION%\var\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var\var_Time_Lapse.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (hh:mm.ss): %TIME_LAPSE% >> %LOG_LOCATION%\%LOG_FILE%
+:skipPSLT
+:: Time Lapse
+IF NOT DEFINED TIME_LAPSE IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	End time: %TIME_END% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION lapse time. >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :EOF
 :: END OF FILE
