@@ -21,6 +21,23 @@
 
 ---
 
+## Version 4.2.1 (2019-10-23)
+#### Added
+- Local log shipping status log
+- Additional TRACE for step 7
+- Internet check for Microsoft Windows updates
+
+#### Changed
+- OS architecture handled by wmic
+- Process file names are prepented with <#>_
+
+#### Fixed
+- Chocolatey err80 now goes GoTo correct location
+- Line 2164 caused script to crash. Removed line.
+
+---
+
+
 ## Version 4.1.0 (2019-10-11)
 #### Added
 - IPv6 Address
@@ -35,7 +52,7 @@
 - Debug output "SCRIPT_VERSION"
 - Running file not deleting
 
----
+
 
 ## Version 4.0.3 (2019-10-01)
 #### Fixed

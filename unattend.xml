@@ -1,8 +1,4 @@
 <!--*************************************************
-Windows 10 Answer File Generator
-Created using Windows AFG found at:
-http://windowsafg.no-ip.org
-
 Installation Notes
 Location: Olympia
 Notes: The Evergreen State College
@@ -80,7 +76,7 @@ Notes: The Evergreen State College
 </ImageInstall>
 <UserData>
 <AcceptEula>true</AcceptEula>
-<FullName>science</FullName>
+<FullName>scientific</FullName>
 <Organization>evergreen.edu</Organization>
 <ProductKey>
 <Key>WCMTC-9NFH3-27TTB-6WCXX-KQBPF</Key>
@@ -135,7 +131,7 @@ Notes: The Evergreen State College
 </ImageInstall>
 <UserData>
 <AcceptEula>true</AcceptEula>
-<FullName>science</FullName>
+<FullName>scientific</FullName>
 <Organization>evergreen.edu</Organization>
 <ProductKey>
 <Key>WCMTC-9NFH3-27TTB-6WCXX-KQBPF</Key>
@@ -207,7 +203,7 @@ Notes: The Evergreen State College
 <PlainText>true</PlainText>
 </Password>
 <Enabled>true</Enabled>
-<Username>science</Username>
+<Username>scientific</Username>
 </AutoLogon>
 <OOBE>
 <HideEULAPage>true</HideEULAPage>
@@ -227,14 +223,14 @@ Notes: The Evergreen State College
 <PlainText>true</PlainText>
 </Password>
 <Description>DEFAULT_USER</Description>
-<DisplayName>science</DisplayName>
+<DisplayName>scientific</DisplayName>
 <Group>Administrators</Group>
-<Name>science</Name>
+<Name>scientific</Name>
 </LocalAccount>
 </LocalAccounts>
 </UserAccounts>
 <RegisteredOrganization>evergreen.edu</RegisteredOrganization>
-<RegisteredOwner>science</RegisteredOwner>
+<RegisteredOwner>scientific</RegisteredOwner>
 <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
 <FirstLogonCommands>
 <SynchronousCommand wcm:action="add">
@@ -259,7 +255,7 @@ Notes: The Evergreen State College
 <PlainText>true</PlainText>
 </Password>
 <Enabled>true</Enabled>
-<Username>science</Username>
+<Username>scientific</Username>
 </AutoLogon>
 <OOBE>
 <HideEULAPage>true</HideEULAPage>
@@ -279,14 +275,14 @@ Notes: The Evergreen State College
 <PlainText>true</PlainText>
 </Password>
 <Description></Description>
-<DisplayName>science</DisplayName>
+<DisplayName>scientific</DisplayName>
 <Group>Administrators</Group>
-<Name>science</Name>
+<Name>scientific</Name>
 </LocalAccount>
 </LocalAccounts>
 </UserAccounts>
 <RegisteredOrganization>evergreen.edu</RegisteredOrganization>
-<RegisteredOwner>science</RegisteredOwner>
+<RegisteredOwner>scientific</RegisteredOwner>
 <DisableAutoDaylightTimeSet>false</DisableAutoDaylightTimeSet>
 	<FirstLogonCommands>
 			<SynchronousCommand wcm:action="add">

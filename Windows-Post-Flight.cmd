@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.1.0
-SET SCRIPT_BUILD=075951
+SET SCRIPT_VERSION=4.2.1
+SET SCRIPT_BUILD=073445
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=80
 mode con:lines=50
@@ -71,7 +71,7 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
 SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight.cmd"
 
-:: Log Files Settings
+:: Default Log Files Settings; will be overriden by config file
 ::  Main script log file
 :: %LOG_LOCATION%\%LOG_FILE%
 SET "LOG_LOCATION=%ProgramData%\%SCRIPT_NAME%\Logs"
@@ -126,19 +126,19 @@ SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
 ::###########################################################################::
 :: sub-file names for each process --configured to output in LOG_LOCATION
 :: Process 1: Local Administrator configuration
-SET PROCESS_1_FILE_NAME=Process_Administrator.txt
+SET PROCESS_1_FILE_NAME=1_Process_Administrator.txt
 :: Process 2: Process Disk condifuration
-SET PROCESS_2_FILE_NAME=Process_DiskPart.txt
+SET PROCESS_2_FILE_NAME=2_Process_DiskPart.txt
 :: Process 3: Change the hostname
-SET PROCESS_3_FILE_NAME=Process_Hostname_Change.txt
+SET PROCESS_3_FILE_NAME=3_Process_Hostname_Change.txt
 :: Process 4: Join a Windows Domain
-SET PROCESS_4_FILE_NAME=Process_Domain_Join.txt
+SET PROCESS_4_FILE_NAME=4_Process_Domain_Join.txt
 :: Process 5: Run Chocolatey
-SET PROCESS_5_FILE_NAME=Process_Chocolatey.txt
+SET PROCESS_5_FILE_NAME=5_Process_Chocolatey.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=Process_Windows_Ultimate.txt
+SET PROCESS_6_FILE_NAME=6_Process_Windows_Ultimate.txt
 :: Process 6: Run Ultimate script
-SET PROCESS_7_FILE_NAME=Process_Windows_Update.txt
+SET PROCESS_7_FILE_NAME=7_Process_Windows_Update.txt
 
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
@@ -556,17 +556,18 @@ ver > %LOG_LOCATION%\var\var_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var\var_ver.txt) DO SET var_VER=%%V
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer Architecture
-FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\var\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
+::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\var\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
+FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') DO SET COMPUTER_ARCHITECTURE=%%P
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
-IF "%COMPUTER_ARCHITECTURE%"=="x64" (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer meets the x64 computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT "%COMPUTER_ARCHITECTURE%"=="x64" GoTo err04
+IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
 :: User Information
 whoami > "%LOG_LOCATION%\var\var_whoami.txt"
 IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WHOAMI= < %LOG_LOCATION%\var\var_whoami.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current User: %var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
 IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\var\var_whoami_fqdn.txt
 IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami_fqdn.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
@@ -812,6 +813,9 @@ IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
+NSLOOKUP %NETDOM_DOMAIN% | (FIND /I "Can't find") && (SET NETWORK_CONNECTION_STATUS=0)
+IF NOT DEFINED NETWORK_CONNECTION_STATUS SET NETWORK_CONNECTION_STATUS=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETWORK_CONNECTION_STATUS: {%NETWORK_CONNECTION_STATUS%} >> %LOG_LOCATION%\%LOG_FILE%
 :jump4W
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1470,12 +1474,22 @@ ECHO Step 7: Working on processing Windows updates...
 :: this should be based off of a txt file generated by checking Windows update Get-WindowsUpdate
 IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" GoTo skip7
 :trap7.1
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
 :: Check to make sure powershell exist
 ::	this should go to an error
 ::	if this file exists, check already happened
-IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo fWUP
+IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo trap7.2
 IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skip7
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PowerShell checks out based on global variable PSMODULEPATH >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
+
+:trap7.2
+:: Check for Internet connectivity using Google Public DNS
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
+NSLOOKUP windowsupdate.microsoft.com 8.8.8.8 > %LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt
+FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt" || GoTo err
+FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Internet connection to Microsoft appears to be up! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
 
 :fWUP
 :: FUNCTION Windows Update via PowerShell
@@ -2056,6 +2070,15 @@ IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting running the Ult
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error61 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
+:err70
+:: ERROR 70 to handle Microsoft/Windows updates
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error70 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	No network connection to Microsoft site to process updates! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting Microsoft Windows updates via PowerShell! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	No network connection to Microsoft site to process updates! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error70 >> %LOG_LOCATION%\%LOG_FILE%
+GoTo skip7
+
 :err80
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error80 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	No network connection to CHOCOLATEY site to download script! >> %LOG_LOCATION%\%LOG_FILE%
@@ -2063,7 +2086,7 @@ IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting running Chocola
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	No network connection to Chocolatey site to download script! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error80 >> %LOG_LOCATION%\%LOG_FILE%
 :: GoTo try and run the next step (Windows Ultimate Commandlet)
-GoTo step6
+GoTo jump8
 
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 100 (DONE)
@@ -2141,6 +2164,10 @@ IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.t
 IF %DEBUG_MODE% EQU 0 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /Q /F "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LOCATION: %LOG_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RUNNING_SCRIPT_NAME.txt: {RUNNING_%SCRIPT_NAME%.txt} >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System believes RUNNING_ file exists! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System doesn't believe RUNNING_ file exists! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
@@ -2149,17 +2176,18 @@ IF NOT DEFINED LOG_SHIPPING_LOCATION GoTo skipLS
 IF %DOMAIN_USER_STATUS% EQU 0 GoTo skipLS
 IF NOT EXIST "%LOG_LOCATION%\%LOG_FILE%" GoTo skipLS
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
-IF EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF EXIST "%LOG_SHIPPING_LOCATION%" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
+IF EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF EXIST "%LOG_SHIPPING_LOCATION%" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log"
 :: LOG SHIPPING even if incomplete
 IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" IF NOT EXIST "%LOG_SHIPPING_LOCATION%" MD "%LOG_SHIPPING_LOCATION%"
-IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
-IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%-%COMPUTERNAME%-%ISO_DATE%-%WPF_RUN_ID%.log"
+IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" COPY /Y "%LOG_LOCATION%\%LOG_FILE%" "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log"
+:: Check if Log got shipped
+IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log" ECHO %ISO_DATE% %TIME%	%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log successfully shipped to %LOG_SHIPPING_LOCATION% >> %LOG_LOCATION%\%SCRIPT_NAME%_Log_Shipping.log
 :skipLS
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
 :: Kill the running file
-IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
+IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q /F "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
 ENDLOCAL
 TIMEOUT 30
 EXIT

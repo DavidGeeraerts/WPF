@@ -15,7 +15,8 @@
 3.	Renames the computer
 4.	Joins a domain (or not)
 5.	Runs customized Chocolatey package list based on hostname
-6.	Runs Windows Ultimate commandlet
+6.	Runs Windows Ultimate commandlet (like Ansible Playbooks)
+7.	Microsoft Windows updates via PowerShell
 
 ## Minor Features
 - Create computer object in AD in specified OU
