@@ -21,6 +21,16 @@
 
 ---
 
+## Version 4.2.3 (2019-10-28)
+#### Added
+- NuGet logs to Windows_Update_Powershell.log
+- Chocolatey Internet connectivity check
+
+#### Fixed
+- Bug in Windows update if no reboot required
+
+---
+
 ## Version 4.2.2 (2019-10-25)
 #### Added
 - GITHUB_WPF_CMD_URI for future use in Config file
@@ -33,8 +43,6 @@
 - Error handling for no entry in host database
 - Error handling for Choco path not set on first run
 - Root script folder has attribute of system folder and is thus hidden
-
----
 
 
 ## Version 4.2.1 (2019-10-23)

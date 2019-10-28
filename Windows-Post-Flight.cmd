@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.2.2
-SET SCRIPT_BUILD=135538
+SET SCRIPT_VERSION=4.2.3
+SET SCRIPT_BUILD=105645
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=70
 mode con:lines=50
@@ -1499,8 +1499,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE%%TIME%	START... >> %LOG_LOCATION%\Windows_Update_Powershell.log
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Processing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
-@powershell Install-PackageProvider -name NuGet -Force
-@powershell Install-Module -name PSWindowsUpdate -Force
+@powershell Install-PackageProvider -name NuGet -Force >> %LOG_LOCATION%\Windows_Update_Powershell.log
+@powershell Install-Module -name PSWindowsUpdate -Force >> %LOG_LOCATION%\Windows_Update_Powershell.log
 ECHO List of updates: >> %LOG_LOCATION%\Windows_Update_Powershell.log
 ECHO ########################################################################## >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WindowsUpdate >> %LOG_LOCATION%\Windows_Update_Powershell.log
@@ -1508,11 +1508,13 @@ ECHO ########################################################################## 
 ECHO. >> %LOG_LOCATION%\Windows_Update_Powershell.log
 :: If nothing to do skip install
 @powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || ECHO %DATE%%TIME%	Finnished Windows Updates >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%PROCESS_7_FILE_NAME%} exists! >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || GoTo skip7
 
 @powershell Install-WindowsUpdate -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Windows updates requires a reboot! Rebooting! >> %LOG_LOCATION%\%LOG_FILE%
-@powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (shutdown -r -t 20) & (GoTo feTime)
+@powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (shutdown -r -t 20)
+@powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (GoTo feTime)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
 
 :skip7
@@ -1542,7 +1544,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [su
 
 :: If there's no network connection to chocolatey.org, the commandlet will fail.
 ::	Self-Preservation
-NSLOOKUP chocolatey.org > %LOG_LOCATION%\var\var_nslookup_Chocolatey.txt
+NSLOOKUP chocolatey.org 8.8.8.8 > %LOG_LOCATION%\var\var_nslookup_Chocolatey.txt
 FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Chocolatey.txt" || GoTo err80
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
