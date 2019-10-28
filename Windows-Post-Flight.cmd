@@ -36,10 +36,10 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.2.1
-SET SCRIPT_BUILD=073445
+SET SCRIPT_VERSION=4.2.2
+SET SCRIPT_BUILD=135538
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=80
+mode con:cols=70
 mode con:lines=50
 Prompt WPF$G
 color 9E
@@ -229,16 +229,16 @@ ECHO.
 ECHO Checking on Powershell...
 IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skipPS
 IF EXIST %LOG_LOCATION%\var\var_PS_Version.txt GoTo skipChkPS
-IF NOT EXIST %TEMP%\var MD %TEMP%\var 
-IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion > %TEMP%\var\var_PS_Version.txt
-FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%TEMP%\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
+IF NOT EXIST %PUBLIC%\Logs\var MD %PUBLIC%\Logs\var 
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion > %PUBLIC%\Logs\var\var_PS_Version.txt
+FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%PUBLIC%\Logs\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%PUBLIC%\Logs\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%PUBLIC%\Logs\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%PUBLIC%\Logs\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
 :skipChkPS
 :: Easiest way to get ISO date
-@powershell Get-Date -format "yyyy-MM-dd" > %TEMP%\var\var_ISO8601_Date.txt
-SET /P ISO_DATE= < %TEMP%\var\var_ISO8601_Date.txt
+@powershell Get-Date -format "yyyy-MM-dd" > %PUBLIC%\Logs\var\var_ISO8601_Date.txt
+SET /P ISO_DATE= < %PUBLIC%\Logs\var\var_ISO8601_Date.txt
 :skipPS
 
 :: Fallback if PowerShell not available
@@ -410,7 +410,8 @@ IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	ALL logging is turned o
 IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 
 :: Now that logging is configured, move some temp var files
-IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%PUBLIC%\Logs\var\var_PS_Version.txt" COPY /Y "%PUBLIC%\Logs\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
+
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
@@ -1209,6 +1210,7 @@ GoTo fhost
 :: FUNCTION SET THE HOSTNAME
 ::	based on MAC address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Set the hostname >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED HOST_MAC GoTo err34
 FIND "%HOST_MAC%" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% > %LOG_LOCATION%\var\MAC-2-HOST.txt
 IF NOT EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt GoTo err33
 IF EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {MAC-2-HOST.txt} just got created!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1382,6 +1384,7 @@ IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
 IF DEFINED CHOCO_PRESENCE IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CHOCO_PRESENCE {%CHOCO_PRESENCE%} >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt IF NOT DEFINED ChocolateyInstall IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] not set, possibly due to a first time run. Environment variable requires a reboot. >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
@@ -1495,7 +1498,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_
 :: FUNCTION Windows Update via PowerShell
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE%%TIME%	START... >> %LOG_LOCATION%\Windows_Update_Powershell.log
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Prcessing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Processing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Install-PackageProvider -name NuGet -Force
 @powershell Install-Module -name PSWindowsUpdate -Force
 ECHO List of updates: >> %LOG_LOCATION%\Windows_Update_Powershell.log
@@ -1519,7 +1522,7 @@ IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF EXIST "%LOG_LOCATION%
 IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% ECHO %DATE% %TIME% Windows update via PowerShell has already run! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows update via PowerShell has already run! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: skip7 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Completed prcessing Windows Updates via PowerShell >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Completed processing Windows Updates via PowerShell >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 >> %LOG_LOCATION%\%LOG_FILE%
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1811,7 +1814,7 @@ GoTo feTime
 :errCONF
 :: ERROR CONF is a FATAL ERROR for NO configuration file
 Color 4E
-ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! NO CONFIGURATION FILE [.\%CONFIG_FILE_NAME%] FOUND! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
+ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! NO CONFIGURATION FILE [.\%CONFIG_FILE_NAME%] FOUND! >> %PUBLIC%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 :: Console Output
 ECHO **************************************************************************
 ECHO * 
@@ -1861,7 +1864,7 @@ GoTo feTime
 :: ERROR 03 (Configuration file schema doesn't meet minimum version)
 CLS
 Color 4E
-ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! CONFIGURATION FILE [%CONFIG_FILE_NAME%] SCHEMA DOESN'T MEET MINIMUM VERSION! >> %TEMP%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
+ECHO %ISO_DATE% %TIME% [FATAL]	FATAL ERROR! CONFIGURATION FILE [%CONFIG_FILE_NAME%] SCHEMA DOESN'T MEET MINIMUM VERSION! >> %PUBLIC%\%SCRIPT_NAME%_%SCRIPT_VERSION%.log
 ECHO **************************************************************************
 ECHO * 
 ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
@@ -2002,6 +2005,13 @@ IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Skipping Steps 3 & 4! >>
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error33 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 
+:err34
+:: ERROR 34 Computer MAC address not found in host database
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error34 >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED HOST_MAC IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Failed to find the computer MAC address in Host database file! >> %LOG_LOCATION%\%LOG_FILE%	
+IF NOT DEFINED HOST_MAC IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Fatal error! System did not find host mac address in the Host database file! Aborting Renaming the computer! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error34 >> %LOG_LOCATION%\%LOG_FILE%
+GoTo step5
 :://///////////////////////////////////////////////////////////////////////////
 :: ERROR LEVEL 40's (DOMAIN JOIN)
 
@@ -2036,7 +2046,10 @@ GoTo step5
 :: ERROR 50 (Chocolatey is not present)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error50 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Chocolatey is not present! Aborting Chocolatey step! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Expecting Chocolatey to be here: %ChocolateyInstall%\choco.exe >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED ChocolateyInstal IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Environment Variable {ChocolateyInstall} not set! >> %LOG_LOCATION%\%LOG_FILE%
+IF DEFINED ChocolateyInstal IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Expecting Chocolatey to be here: %ChocolateyInstall%\choco.exe >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Attempting reboot for Environment Variable {ChocolateyInstall} to set! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" (shutdown -r -t 20) & (GoTo feTime)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error50 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step6
 
@@ -2164,13 +2177,12 @@ IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.t
 IF %DEBUG_MODE% EQU 0 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /Q /F "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%SCRIPT_NAME% log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log IF DEFINED LOG_SHIPPING_LOCATION IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Log {%LOG_FILE%} will attempt to ship to {%LOG_SHIPPING_LOCATION%}. >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LOCATION: %LOG_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RUNNING_SCRIPT_NAME.txt: {RUNNING_%SCRIPT_NAME%.txt} >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System believes RUNNING_ file exists! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System doesn't believe RUNNING_ file exists! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System believes {RUNNING_%SCRIPT_NAME%.txt} file exists! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	System doesn't believe {RUNNING_%SCRIPT_NAME%.txt} file exists! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	END! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO END %DATE% %TIME%
 Echo. >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: LOG SHIPPING
 IF NOT DEFINED LOG_SHIPPING_LOCATION GoTo skipLS
 IF %DOMAIN_USER_STATUS% EQU 0 GoTo skipLS
@@ -2183,6 +2195,13 @@ IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" COPY /Y "%LOG_LOCATION%\%
 :: Check if Log got shipped
 IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log" ECHO %ISO_DATE% %TIME%	%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log successfully shipped to %LOG_SHIPPING_LOCATION% >> %LOG_LOCATION%\%SCRIPT_NAME%_Log_Shipping.log
 :skipLS
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: With version 4.2.2 the top level folder became a system folder and is hidden
+:: This undoes that
+attrib -R -S -H "%POST_FLIGHT_DIR%" /D 2> nul
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console

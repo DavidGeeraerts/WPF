@@ -21,6 +21,22 @@
 
 ---
 
+## Version 4.2.2 (2019-10-25)
+#### Added
+- GITHUB_WPF_CMD_URI for future use in Config file
+
+#### Changed
+- TEMP to PUBLIC for alternate log location
+
+#### Fixed
+- typos
+- Error handling for no entry in host database
+- Error handling for Choco path not set on first run
+- Root script folder has attribute of system folder and is thus hidden
+
+---
+
+
 ## Version 4.2.1 (2019-10-23)
 #### Added
 - Local log shipping status log
@@ -34,8 +50,6 @@
 #### Fixed
 - Chocolatey err80 now goes GoTo correct location
 - Line 2164 caused script to crash. Removed line.
-
----
 
 
 ## Version 4.1.0 (2019-10-11)
