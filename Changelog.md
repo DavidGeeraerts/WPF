@@ -21,6 +21,21 @@
 
 ---
 
+## Version 4.2.4 (2019-11-18)
+#### Added
+- Script start file
+
+#### Changed
+- Total lapse time now handled by powershell
+
+#### Fixed
+- Powershell check
+
+#### Removed
+- Extra "Start" in the log file
+
+---
+
 ## Version 4.2.3 (2019-10-28)
 #### Added
 - NuGet logs to Windows_Update_Powershell.log
@@ -29,7 +44,7 @@
 #### Fixed
 - Bug in Windows update if no reboot required
 
----
+
 
 ## Version 4.2.2 (2019-10-25)
 #### Added

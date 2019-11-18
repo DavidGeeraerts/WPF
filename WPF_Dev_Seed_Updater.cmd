@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=3.2.0
+SET Version=3.3.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -109,7 +109,9 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLU
 :: Shortcut link
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight.lnk /R:2 /W:5
 :: Ultimate script
-IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice.cmd /R:2 /W:5
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice_Dev.cmd /R:2 /W:5
+IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd" del /F /Q "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd"
+IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd"  SC_Sorcerer's_Apprentice.cmd
 
 IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
 IF EXIST %FLASH_DRIVE_VOLUME% GoTo EOF
