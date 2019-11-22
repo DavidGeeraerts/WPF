@@ -21,6 +21,14 @@
 
 ---
 
+## Version 4.2.5 (2019-11-22)
+#### Fixed
+- PS Check Major typo
+- Powershell handle for total lapse time
+- post var file cleanup
+
+---
+
 ## Version 4.2.4 (2019-11-18)
 #### Added
 - Script start file
@@ -34,7 +42,7 @@
 #### Removed
 - Extra "Start" in the log file
 
----
+
 
 ## Version 4.2.3 (2019-10-28)
 #### Added
