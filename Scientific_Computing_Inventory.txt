@@ -1,21 +1,21 @@
-# LAST-UPDATED: 2019-11-15	1056
+# LAST-UPDATED: 2019-11-25	0808
 
-# Manager
+# [Manager]
 SC-Sphere	64-00-6A-6A-11-D8
 
-# Server Production
+# [Server Production]
 SC-Tellus	90-B1-1C-15-F4-F2
 SC-Tellus	90-B1-1C-15-F4-F3
 SC-Vanadium	00-1E-C9-2B-6F-C8
 SC-Vanadium	00-1E-C9-2B-6F-C6
 
-# Testing and Development
+# [Testing and Development]
 SC-Cavia-10		54-BF-64-65-C3-2F
 SC-Dysprosium	18-03-73-D4-7B-AF
 SC-Cavia-10-V	00-15-5D-03-FB-08
 SC-CAL-Cavia-V	00-15-5D-03-FB-0E
 
-# Computer Applications Lab (CAL)
+# [Computer Applications Lab (CAL)]
 SC-CAL-E-00	5C-F9-DD-70-AB-55
 SC-CAL-E-01	B8-CA-3A-9A-C5-9E
 SC-CAL-E-02	B8-CA-3A-9A-DB-03
@@ -76,7 +76,7 @@ SC-CAL-P-3	34-17-EB-B1-3C-76
 SC-CAL-Staff-1	B8-CA-3A-9A-D8-B1
 SC-CAL-Staff-2	5C-F9-DD-71-86-81
 
-# Laboratoriums
+# [Laboratoriums]
 SC-XPS18-00	68-17-29-43-86-7B
 SC-XPS18-01	68-17-29-46-0D-33
 SC-XPS18-02	68-17-29-43-78-E3
@@ -96,7 +96,7 @@ SC-XPS18-15	68-17-29-43-82-A7
 SC-XPS18-16	68-17-29-43-83-6A
 SC-XPS18-17	E8-2A-EA-74-B9-4A
 
-# Auxiliary
+# [Auxiliary]
 SC-Geology-1	D0-67-E5-26-55-29
 SC-EA-1	78-2B-CB-B7-6B-14
 SC-Lutetium-01	78-2B-CB-B7-69-E7
@@ -114,7 +114,7 @@ SC-NHM-01	5C-F9-DD-71-9C-DD
 SC-NHM-02	5C-F9-DD-71-9F-09
 SC-Outlier-01	34-17-EB-B2-DD-88	
 
-# Science Support Center (SSC) Laptops
+# [Science Support Center (SSC) Laptops]
 SC-SSC-L-01	9C-B6-D0-E5-2B-B5
 SC-SSC-L-02	9C-B6-D0-E5-2B-A7
 SC-SSC-L-03	9C-B6-D0-E5-2B-B7
@@ -132,7 +132,7 @@ SC-SSC-L-14	9C-B6-D0-E5-2F-51
 SC-SSC-L-15	9C-B6-D0-E5-2B-59
 SC-SSC-L-16	9C-B6-D0-E5-29-91
 
-# Scientific Instrumentation
+# [Scientific Instrumentation]
 SC-Olympus-BX63	50-9A-4C-4C-4C-DB
 SC-GOWMAC-1	78-2B-CB-B7-65-A7
 SC-GOWMAC-2	78-2B-CB-B7-6A-62
@@ -144,12 +144,12 @@ SC-GOWMAC-7	78-2B-CB-B7-66-50
 SC-GOWMAC-8	78-2B-CB-B7-64-45
 SC-Weather	18-03-73-AE-2E-8B
 
-#Research
+# [Research]
 SC-Research-01	5C-F9-DD-71-84-F7
 SC-Fungi-01	5C-F9-DD-71-89-20
 SC-Avian-01	5C-F9-DD-70-82-1B
 SC-EEON-01	E4-54-E8-57-C8-41
 
-# Standby (model-asset#)
+# [Standby (model-asset#)]
 SC-7010-7306
 SC-790-6571

@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.2.5
-SET SCRIPT_BUILD=20191122-1315
+SET SCRIPT_VERSION=4.2.6
+SET SCRIPT_BUILD=20191202-0948
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=70
 mode con:lines=50
@@ -416,8 +416,8 @@ IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 :: Now that logging is configured, move some temp var files
 IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\var\Script_Start.txt" ECHO %START_TIME%> "%LOG_LOCATION%\var\Script_Start.txt"
-IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\WPF_START_TIME.txt" DEL /F /Q "%LOG_LOCATION%\WPF_START_TIME.txt"
-IF NOT EXIST "%LOG_LOCATION%\WPF_START_TIME.txt" ECHO %START_TIME%> "%LOG_LOCATION%\WPF_START_TIME.txt"
+IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Start_Time.txt"
+IF NOT EXIST "%LOG_LOCATION%\WPF_Start_Time.txt" ECHO %START_TIME%> "%LOG_LOCATION%\WPF_Start_Time.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
@@ -2135,8 +2135,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end tim
 :: Calculate the actual lapse time
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION lapse time... >> %LOG_LOCATION%\%LOG_FILE%
 IF %PS_STATUS% EQU 0 GoTo skipPSLT
-@PowerShell.exe -c "$span=([datetime]'%End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var\var_Time_Lapse.txt
-IF EXIST %LOG_LOCATION%\var\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var\var_Time_Lapse.txt
+@PowerShell.exe -c "$span=([datetime]'%End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var_Time_Lapse.txt
+IF EXIST %LOG_LOCATION%\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var_Time_Lapse.txt
+IF EXIST "%LOG_LOCATION%\var" MOVE /Y "%LOG_LOCATION%\var_Time_Lapse.txt" "%LOG_LOCATION%\var"
+IF NOT EXIST "%LOG_LOCATION%\var" IF %VAR_CLEANUP% EQU 1 DEL /F /Q "%LOG_LOCATION%\var_Time_Lapse.txt"
 :skipPSLT
 :: Time Lapse 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (hh:mm.ss): %TIME_LAPSE% >> %LOG_LOCATION%\%LOG_FILE%
@@ -2148,7 +2150,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION lapse t
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Total lapse time... >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Skipping total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo skipTLT
-SET /P WPF_START_TIME= < "%LOG_LOCATION%\WPF_START_TIME.txt"
+SET /P WPF_START_TIME= < "%LOG_LOCATION%\WPF_Start_Time.txt"
 IF EXIST %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt DEL /Q /F %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt
 IF %PS_STATUS% EQU 0 GoTo skipTLT
 @PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%WPF_START_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
@@ -2158,7 +2160,7 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total time lapse (hh
 FOR /F "tokens=6 delims= " %%P IN ('find /I "Time Lapsed" "%LOG_LOCATION%\%LOG_FILE%"') DO ECHO %%P >> %LOG_LOCATION%\WPF_Reboots.txt
 IF DEFINED WPF_TOTAL_TIME FOR /F "tokens=3 delims=:" %%P IN ('FIND /C ":" "%LOG_LOCATION%\WPF_Reboots.txt"') DO IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Total Reboots:%%P >> %LOG_LOCATION%\%LOG_FILE%
 :: Cleanup up some post-cleanup files since var folder no longer exists if var switch is turned on to clean up
-IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_START_TIME.txt" DEL /F /Q "%LOG_LOCATION%\WPF_START_TIME.txt"
+IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Start_Time.txt"
 IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
 IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Reboots.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Reboots.txt"
 :skipTLT
