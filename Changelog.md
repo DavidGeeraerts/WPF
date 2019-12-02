@@ -21,6 +21,16 @@
 
 ---
 
+## Version 4.3.0 (2019-12-02)
+#### Added
+- RSAT Cleanup
+
+#### Changed
+- Config file schema
+
+---
+
+
 ## Version 4.2.6 (2019-12-02)
 #### Fixed
 - Last time lapse 
@@ -28,7 +38,6 @@
 #### Changed
 - Casing for WFP_start_Time file
 
----
 
 ## Version 4.2.5 (2019-11-22)
 #### Fixed

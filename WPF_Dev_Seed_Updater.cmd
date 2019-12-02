@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=3.3.0
+SET Version=3.4.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
