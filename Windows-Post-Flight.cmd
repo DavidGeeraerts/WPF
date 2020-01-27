@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.3.0
-SET SCRIPT_BUILD=20191202-1043
+SET SCRIPT_VERSION=4.4.0
+SET SCRIPT_BUILD=20200127-0940
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=70
 mode con:lines=50
@@ -416,7 +416,7 @@ IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	ALL logging is turned o
 IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 
 :: Now that logging is configured, move some temp var files
-IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to {%LOG_LOCATION%\var}. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to [%LOG_LOCATION%\var]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\var\Script_Start.txt" ECHO %START_TIME%> "%LOG_LOCATION%\var\Script_Start.txt"
 IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Start_Time.txt"
 IF NOT EXIST "%LOG_LOCATION%\WPF_Start_Time.txt" ECHO %START_TIME%> "%LOG_LOCATION%\WPF_Start_Time.txt"
@@ -541,20 +541,20 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6%
 IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
 	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt)
 	) && (
-	IF EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+	IF EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_systeminfo.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
 	)
 IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_OsName.txt (
 	FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt
 	 ) ELSE (
 		IF EXIST %LOG_LOCATION%\FirstTimeRun.txt FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt 
 	 ) && (
-		IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_systeminfo_OsName.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+		IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
 		)
 SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var\var_systeminfo.txt
 SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var\var_systeminfo_OsName.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get Windows version (Based on release ID --more relevant for Windows 10)
-FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_Windows_Version.txt} just got created! >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_Windows_Version.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var\var_Windows_Version.txt
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WINDOWS_VERSION: {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 VER | FIND /I "Version 10." && (
@@ -573,11 +573,11 @@ IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
 IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
 :: User Information
 whoami > "%LOG_LOCATION%\var\var_whoami.txt"
-IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_whoami.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WHOAMI= < %LOG_LOCATION%\var\var_whoami.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current User: %var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
 IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\var\var_whoami_fqdn.txt
-IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%LOG_LOCATION%\var\var_whoami_fqdn.txt} just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_whoami_fqdn.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
 IF EXIST %LOG_LOCATION%\var\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: General Information.) >> %LOG_LOCATION%\%LOG_FILE%
@@ -607,7 +607,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_C
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Check. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 :varS
 :: Start of variable debug
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Variable debug!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -793,10 +793,10 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
 IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
-IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %ROBO_SEED_CODE% EQU 3 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location {%POST_FLIGHT_DIR%} just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ROBO_SEED_CODE% EQU 3 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% LEQ 3 ECHO Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive [%SEED_DRIVE_VOLUME%]!
-IF %ROBO_SEED_CODE% GTR 7 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Seed location {%POST_FLIGHT_DIR%} failed to update!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %ROBO_SEED_CODE% GTR 7 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Seed location [%POST_FLIGHT_DIR%] failed to update!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to update!
 :jump3
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [3]: update seed location if seed drive found. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1265,6 +1265,8 @@ IF /I "%NETDOM_DOMAIN%"=="" (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [
 IF /I "%NETDOM_DOMAIN%"=="NOT_SET" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Not joining a domain! Domain was configured to skip!) >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%NETDOM_DOMAIN%"=="NOT_SET" GoTo step5
 IF NOT DEFINED NETDOM_DOMAIN GoTo step5
+IF /I "%HOSTNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Default hostname is the same as current hostname! Abort domain join!) >> %LOG_LOCATION%\%LOG_FILE%
+IF /I "%HOSTNAME%"=="%DEFAULT_HOSTNAME%" GoTo step5
 IF /I NOT "%NETDOM_DOMAIN%"=="" GoTo trap41
 
 :trap41
@@ -1424,9 +1426,9 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on Chocolatey pa
 ECHO. >> %LOG_LOCATION%\Running_Chocolatey.txt
 ECHO %CHOCO_PACKAGE_RUN% >> %LOG_LOCATION%\Running_Chocolatey.txt
 Choco upgrade %CHOCO_PACKAGE_RUN% /Y
-ECHO %DATE% %TIME%: %var_CHOCOLATEY% ran this package list {%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%}! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
+ECHO %DATE% %TIME%: %var_CHOCOLATEY% ran this package list [%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%]! >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 Choco LIST --Local-Only >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% ran this package list {%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%}! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% ran this package list [%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%]! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%LOG_LOCATION%\Running_Chocolatey.txt" DEL /Q "%LOG_LOCATION%\Running_Chocolatey.txt"
 ECHO %DATE% %TIME% %var_CHOCOLATEY% completed package list install. >> %LOG_LOCATION%\%PROCESS_5_FILE_NAME%
 GoTo step6
@@ -1794,7 +1796,7 @@ IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 1 (
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Ending for complete >> %LOG_LOCATION%\%LOG_FILE%
 :: Remove the var directory if set for cleanup
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION {%LOG_LOCATION%\var} has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION [%LOG_LOCATION%\var] has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
 IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
@@ -1858,8 +1860,8 @@ EXIT
 :err00
 :: ERROR 00 FATAL ERROR for folder cannot be created
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error00 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder {%LOG_LOCATION%} could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder {%LOG_LOCATION%\var} could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder [%LOG_LOCATION%] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder [%LOG_LOCATION%\var] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Exit error00 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
@@ -1941,8 +1943,8 @@ ECHO.
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: {%LOG_LOCATION%\var} got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: {%LOG_LOCATION%\var} got deleted!
+IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 500
 GoTo feTime
@@ -1963,8 +1965,8 @@ ECHO.
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: {%LOG_LOCATION%\var} got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: {%LOG_LOCATION%\var} got deleted!
+IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error06 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 500
 GoTo feTime
