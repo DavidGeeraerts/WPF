@@ -20,6 +20,19 @@
 [//]: # (#### Deprecated)
 
 ---
+
+## Version 4.5.0 (2020-03-03)
+#### Added
+- Computer UUID (Universally unique identifier)
+
+#### Changed
+- console lines 45
+
+#### Fixed
+- log output for start of debug
+
+---
+
 ## Version 4.4.0 (2020-01-27)
 #### Fixed
 - If hostname is default, don't join domain
@@ -27,7 +40,6 @@
 #### Changed
 - log formatting for paths's: []
 
----
 
 ## Version 4.3.0 (2019-12-02)
 #### Added
