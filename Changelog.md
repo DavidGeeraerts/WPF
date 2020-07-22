@@ -20,6 +20,13 @@
 [//]: # (#### Deprecated)
 
 ---
+## Version 4.5.1 (2020-07-22)
+### Changed
+- Log verbage
+- Log info order
+- INFO items to DEBUG items
+
+---
 
 ## Version 4.5.0 (2020-03-03)
 #### Added
@@ -40,6 +47,7 @@
 #### Changed
 - log formatting for paths's: []
 
+---
 
 ## Version 4.3.0 (2019-12-02)
 #### Added
@@ -48,6 +56,7 @@
 #### Changed
 - Config file schema
 
+---
 
 ## Version 4.2.6 (2019-12-02)
 #### Fixed
@@ -56,6 +65,7 @@
 #### Changed
 - Casing for WFP_start_Time file
 
+---
 
 ## Version 4.2.5 (2019-11-22)
 #### Fixed
@@ -63,7 +73,7 @@
 - Powershell handle for total lapse time
 - post var file cleanup
 
-
+---
 
 ## Version 4.2.4 (2019-11-18)
 #### Added
@@ -78,7 +88,7 @@
 #### Removed
 - Extra "Start" in the log file
 
-
+---
 
 ## Version 4.2.3 (2019-10-28)
 #### Added
@@ -88,7 +98,7 @@
 #### Fixed
 - Bug in Windows update if no reboot required
 
-
+---
 
 ## Version 4.2.2 (2019-10-25)
 #### Added
@@ -118,6 +128,7 @@
 - Chocolatey err80 now goes GoTo correct location
 - Line 2164 caused script to crash. Removed line.
 
+---
 
 ## Version 4.1.0 (2019-10-11)
 #### Added
@@ -133,15 +144,14 @@
 - Debug output "SCRIPT_VERSION"
 - Running file not deleting
 
-
+---
 
 ## Version 4.0.3 (2019-10-01)
 #### Fixed
 - RUNNING_ log file not getting deleted when done.
 - improved logging output
 
-
-
+---
 
 ## Version 4.0.2 (2019-09-25)
 #### Added
@@ -155,9 +165,7 @@
 - shipping log file even if incomplete
 - WPF Total lapse time
 
-
-
-
+---
 
 ## Version 3.6.1 (2019-09-19)
 #### Changed
@@ -167,7 +175,7 @@
 #### Changed
 - Process files default names
 
-
+---
 
 ## Version 3.6.0 (2019-09-18)
 #### Added
@@ -178,7 +186,7 @@
 - DISM RSAT log no longer in var folder, but in main log.
 - DISM RSAT log goes in completed log.
 
-
+---
 
 ## Version 3.5.3 (2019-08-29)
 #### Changed
@@ -187,7 +195,7 @@
 #### Fixed
 - WPF running file not deleted when run ends
 
-
+---
 
 ## Version 3.5.2 2019-08-28
 #### Added
@@ -202,14 +210,14 @@
 - when scheduled task first created with domain user, reported error.
 - First time run or follow up run.
 
-
+---
 
 ## Version 3.5.1 2019-08-19
 #### Fixed
 - RUNNING_WPF file
 - Log shipping
 
-
+---
 
 ## Version 3.5.0 2019-08-15
 #### Added
@@ -219,10 +227,9 @@
 #### Fixed
 - Chocolatey variable log output
 
-
+---
 
 ## Version 3.4.1 2019-08-06
-
 #### Changed
 - RSAT attempts to 3
 
@@ -231,7 +238,7 @@
 - RSAT logging
 - RSAT console output formatting
 
-
+---
 
 ## Version 3.4.0 2019-05-30
 #### Added
@@ -244,7 +251,7 @@
 #### Fixed
 - Log output for PROCESS_3_FILE_NAME
 
-
+---
 
 ## Version 3.3.0 2019-05-02
 #### Added
@@ -264,7 +271,7 @@
 #### Removed
 - Deleting the MAC files as individual files
 
-
+---
 
 ## Version 3.2.0 2019-05-01
 #### Added
@@ -286,17 +293,16 @@
 #### Security
 - SHA256 check for all lower case
 
-
+---
 
 ## Version 3.1.0 2019-04-26
 #### Fixed
 - syntax error
 - logging for debugger
 
+---
 
 ## Version 3.1.0 2019-04-26
-
-
 #### Added
 - console output
 - powershell ISO date

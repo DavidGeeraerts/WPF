@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows-Post-Flight_Seed_Updater
-SET Version=2.2.0
+SET Version=2.3.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -97,8 +97,8 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" unattend.xml /R:2 /W:5
 :: Text files
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.txt /R:2 /W:5
-:: RSAT installer
-IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.msu /NP /R:2 /W:5
+:: RSAT installer (Deprecated)
+:: IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.msu /NP /R:2 /W:5
 :: All of the Chocolatey support files
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLUME%" *.* /R:2 /W:5
 :: Shortcut Link
