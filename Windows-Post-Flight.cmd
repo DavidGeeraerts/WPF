@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.5.0
-SET SCRIPT_BUILD=20200303-1357
+SET SCRIPT_VERSION=4.5.1
+SET SCRIPT_BUILD=20200722-0823
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=70
 mode con:lines=45
@@ -446,7 +446,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debug Mode.) >>
 ::	DEBUGGER
 :: Computer used for debugging so that automatic ALL logging is on
 ::	this is hostname dependent, so first run will not be automatically set.
-IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debugger...) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Host debugger ...) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 GoTo skipDebug
 IF NOT DEFINED DEBUGGER GoTo skipDebug
 IF %DEBUG_MODE% EQU 1 GoTo skipDebug
@@ -463,8 +463,11 @@ IF /I %HOST_STRING%==%DEBUGGER% (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && 
 IF /I %HOST_STRING%==%DEBUGGER% IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
 
 :skipDebug
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debugger.) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Host debugger.) >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: Start of log
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :flogl
@@ -511,7 +514,6 @@ ECHO Logs can be found here: %LOG_LOCATION%
 ECHO %SCRIPT_NAME% log file: %LOG_FILE%
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: General Information...) >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	START... >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt (
 	FOR /F "tokens=2-5 delims=()&" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO %%S%%T%%U%%V > %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
 	) && IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
@@ -519,7 +521,7 @@ SET /P var_TimeZone= < %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %var_TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	SCRIPT_BUILD: %SCRIPT_BUILD% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Minimum config file {%CONFIG_FILE_NAME%} version {%WPF_CONFIG_SCHEMA_VERSION_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Minimum config file {%CONFIG_FILE_NAME%} version {%WPF_CONFIG_SCHEMA_VERSION_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Script state
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} was created!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -528,6 +530,11 @@ IF EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO 
 
 :: Computer Information
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
+:: Acquire UUID
+IF NOT EXIST "%LOG_LOCATION%\var\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\var\var_UUID.txt
+SET /P UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %UUID% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Future may need to use NETSH interface {ipv4/ipv6} show addresses
 :: Simple IPv4 extraction --only works for 1 NIC
 FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
@@ -537,10 +544,6 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IPv4%
 FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
 SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
-:: Acquire UUID
-IF NOT EXIST "%LOG_LOCATION%\var\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\var\var_UUID.txt
-SET /P UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %UUID% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: fancy parsing for proper output of info
 IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
@@ -574,7 +577,7 @@ FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') D
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
 IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
 :: User Information
 whoami > "%LOG_LOCATION%\var\var_whoami.txt"
@@ -857,12 +860,12 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Checking for password files...
 ECHO.
-IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] found!
 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% SET /P ADMIN_PASSWORD= < %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
 IF NOT EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] not found!
-IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% ECHO Domain Join User Password file [%NETDOM_USERD_PW_FILE%] found!
 IF "%NETDOM_PASSWORDD%"=="*" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	User requested to be prompted with domain join password! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% SET /P NETDOM_PASSWORDD= < %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%)
@@ -1398,7 +1401,7 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for Chocolatey 
 SET CHOCO_PRESENCE=0
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
 IF DEFINED CHOCO_PRESENCE IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CHOCO_PRESENCE {%CHOCO_PRESENCE%} >> %LOG_LOCATION%\%LOG_FILE%
-IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey variable [ChocolateyInstall] exists! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
+IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Chocolatey variable [ChocolateyInstall] exists! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt IF NOT DEFINED ChocolateyInstall IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] not set, possibly due to a first time run. Environment variable requires a reboot. >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
@@ -1464,7 +1467,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6 >> %LOG_LO
 :: TRAP 6.1 Self-Preservation against Ultimate commandlet not properly set for Exit /B
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
 FINDSTR /BLC:"EXIT /B" "%ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%" || GoTo err61
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The Ultimate commandlet meets the Exit /B requirement! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	The Ultimate commandlet meets the Exit /B requirement! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
 
 :fulti
