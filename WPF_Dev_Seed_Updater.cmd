@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=3.5.0
+SET Version=3.6.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -88,6 +88,7 @@ IF EXIST %FLASH_DRIVE_VOLUME% FOR /F "tokens=1 delims=\" %%P IN ("%FLASH_DRIVE_V
 IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_VOLUME% will be updated!)
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+CD /D %FLASH_DRIVE_VOLUME%\
 
 :run
 :: Main WPF commandlet and config file
@@ -101,6 +102,7 @@ IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.cmd" rename "%FLASH_DRIVE
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" Windows-Post-Flight.config
 :: Windows Unattend.xml file
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" unattend.xml /R:2 /W:5
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Pre-Seeded_unattend.xml /R:2 /W:5
 :: Text files
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.txt /R:2 /W:5
 :: RSAT installer
@@ -114,16 +116,28 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice_Dev.cmd /R:2 /W:5
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd" del /F /Q "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd"
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd"  SC_Sorcerer's_Apprentice.cmd
-
-IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
-IF EXIST %FLASH_DRIVE_VOLUME% GoTo EOF
-
 :: Make password files hidden
 IF EXIST %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt
 IF EXIST %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt
+:: UPDATE THE SHA256 FILE
+IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight_SHA256.txt" DEL /Q /F "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight_SHA256.txt"
+IF EXIST "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt" DEL /Q /F "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt"
+FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.cmd" SHA256') DO ECHO %%P>> "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt"
+SET /P VAR_GET_WPF_SHA256= < "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt"
+ECHO %VAR_GET_WPF_SHA256%> "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight_SHA256.txt"
+del /Q var_get_WPF_SHA256.txt
+echo SHA256 updated.
+echo.
+:: Session file for last updated
+ECHO %DATE% %TIME% Updated! > "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
 
-:: Make DEBUGGER file
-IF EXIST %FLASH_DRIVE_VOLUME% ECHO %DATE% %TIME% Updated! > %FLASH_DRIVE_VOLUME%\DEBUGGER.txt
+
+:: When complete
+IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
+IF EXIST %FLASH_DRIVE_VOLUME% GoTo End
+
+
+:: ERRORS
 
 :error00
 cls
@@ -131,7 +145,7 @@ IF NOT EXIST %FLASH_DRIVE_VOLUME% COLOR 4A
 IF NOT EXIST %FLASH_DRIVE_VOLUME% ECHO No flash drive was found with volume label [%FLASH_DRIVE_VOLUME_KEYWORD%]!
 TIMEOUT /T 900
 
-:EOF
+:End
 ENDLOCAL
 TIMEOUT /T 300
 EXIT

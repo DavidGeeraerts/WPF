@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.5.1
-SET SCRIPT_BUILD=20200722-0823
+SET SCRIPT_VERSION=4.6.0
+SET SCRIPT_BUILD=20200730-0911
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=70
 mode con:lines=45
@@ -534,6 +534,11 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME%
 IF NOT EXIST "%LOG_LOCATION%\var\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\var\var_UUID.txt
 SET /P UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %UUID% >> %LOG_LOCATION%\%LOG_FILE%
+:: Get CloneZilla image name from file
+IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	CloneZilla image file not found! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CloneZilla image file expected location [%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt] >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" SET /P $CLONEZILLA_IMAGE= < "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt"
+IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CloneZilla Image: %$CLONEZILLA_IMAGE% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Future may need to use NETSH interface {ipv4/ipv6} show addresses
 :: Simple IPv4 extraction --only works for 1 NIC
@@ -624,7 +629,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	-------------------------------------------------
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is numeric-alpha sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
 
-
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $CLONEZILLA_IMAGE: {%$CLONEZILLA_IMAGE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_NETLOGON: {%AD_NETLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_COMPUTER_OU: {%AD_COMPUTER_OU%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -779,15 +784,18 @@ ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
 DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
-FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\FOUND_SEED_DRIVE.txt
-FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
+FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt
+FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
+:: Skip checking seed drive after first time run if not found
+IF NOT DEFINED SEED_DRIVE_VOLUME ECHO No seed drive found!
+IF NOT DEFINED SEED_DRIVE_VOLUME IF NOT EXIST "%LOG_LOCATION%\FirstTimeRun.txt" GoTo jump3
+IF NOT DEFINED SEED_DRIVE_VOLUME IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	No Seed Drive found! >> %LOG_LOCATION%\%LOG_FILE%
+:: Seed drive found
 IF EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed Drive Found: {%SEED_DRIVE_VOLUME%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Seed Drive Found: %SEED_DRIVE_VOLUME%
-IF NOT EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	No Seed Drive found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %SEED_DRIVE_VOLUME% ECHO No seed drive found!
 IF EXIST %LOG_LOCATION%\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [2]: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1373,8 +1381,8 @@ GoTo feTime
 :skip4
 :: Skip 4 means the computer has already been joined to the domain
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip4 >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% %COMPUTERNAME% has already been joined to the domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%COMPUTERNAME% has already been joined to the domain [%NETDOM_DOMAIN%]! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% %COMPUTERNAME% has already been joined to the domain {%NETDOM_DOMAIN%}! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%COMPUTERNAME% has already been joined to the domain {%NETDOM_DOMAIN%}! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step5
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1477,13 +1485,13 @@ ECHO %DATE% %TIME%: Ultimate file [%ULTIMATE_FILE_NAME%] is attempting to run...
 IF EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% CALL :subr2
 :jump2
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump2 >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file [%ULTIMATE_FILE_NAME%] ran!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} ran!) >> %LOG_LOCATION%\%LOG_FILE%
 GoTo step7
 
 :skip6
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip6 >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} has already run! >> %LOG_LOCATION%\%LOG_FILE%
 
 :://///////////////////////////////////////////////////////////////////////////
 :step7
@@ -1791,13 +1799,13 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% NET LOCALGROUP Administrators | 
 SET DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DOMAINUSER_LOCALGROUP_DELETE_ERRORLEVEL: {%DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 0 (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Default user from unattend.xml [%DEFAULT_USER%] was just deleted from the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Default user from unattend.xml {%DEFAULT_USER%} was just deleted from the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
 	)
 IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 2 (
-	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Default user from unattend.xml [%DEFAULT_USER%] was not in the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Default user from unattend.xml {%DEFAULT_USER%} was not in the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
 	)
 IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 1 (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Default user from unattend.xml [%DEFAULT_USER%] could not be removed from the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Default user from unattend.xml {%DEFAULT_USER%} could not be removed from the local administrators group! >> %LOG_LOCATION%\%LOG_FILE%
 	)
 
 :endc
@@ -1820,6 +1828,17 @@ IF %SEED_LOCATION_CLEANUP% EQU 1 (ROBOCOPY %POST_FLIGHT_DIR% %POST_FLIGHT_DIR%\T
 IF EXIST %POST_FLIGHT_DIR%\TOBEDELETED RD /S /Q %POST_FLIGHT_DIR%\TOBEDELETED
 IF %SEED_LOCATION_CLEANUP% EQU 1 (IF NOT EXIST %POST_FLIGHT_DIR%\TOBEDELETED (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	SEED LOCATION [%POST_FLIGHT_DIR%] has been cleaned up!)) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%
+:: Remove unattend.xml file
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Unattend.xml cleanup... >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%SYSTEMDRIVE%\unattend.xml" GoTo skipUC
+IF %SEED_LOCATION_CLEANUP% EQU 0 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Leaving unattend.xml on system. >> %LOG_LOCATION%\%LOG_FILE%
+IF %SEED_LOCATION_CLEANUP% EQU 0 GoTo skipUC
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%SYSTEMDRIVE%\unattend.xml" DEL /F /Q "%SYSTEMDRIVE%\unattend.xml"
+IF NOT EXIST "%SYSTEMDRIVE%\unattend.xml" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	unattend.xml file deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%SYSTEMDRIVE%\unattend.xml" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	unattend.xml not deleted from system! >> %LOG_LOCATION%\%LOG_FILE%
+:skipUC
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Unattend.xml cleanup. >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Cleanup up RSAT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Cleanup... >> %LOG_LOCATION%\%LOG_FILE%
 IF %RSAT_STATUS% EQU 1 GoTo skipCRSAT
@@ -2101,9 +2120,9 @@ GoTo step5
 :err60
 :: ERROR 60 (Ulimate file cannot be found or is off-line)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error60 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	FAILED to load Ultimate FILE [%ULTIMATE_FILE_NAME%] from %ULTIMATE_FILE_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	FAILED to load Ultimate FILE {%ULTIMATE_FILE_NAME%} from %ULTIMATE_FILE_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %ULTIMATE_FILE_LOCATION% ECHO %ISO_DATE% %TIME% [ERROR]	Ultimate file location [%ULTIMATE_FILE_LOCATION%] is OFF-LINE! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Aborting running [%ULTIMATE_FILE_NAME%]!
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Aborting running {%ULTIMATE_FILE_NAME%}!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error60 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 

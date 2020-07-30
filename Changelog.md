@@ -19,7 +19,24 @@
 [//]: # (#### Security)
 [//]: # (#### Deprecated)
 
+
 ---
+## Version 4.6.0 (2020-07-30)
+### Added
+- info CloneZilla image file name
+- unattend.xml for pre-seeding
+- unattend.xml removal when pre-seeded
+
+### Changed
+- Seed drive logging
+- relocated FOUND_SEED_DRIVE into var folder
+
+### Fixed
+- variable {} encapsulation consistency
+
+---
+
+
 ## Version 4.5.1 (2020-07-22)
 ### Changed
 - Log verbage
