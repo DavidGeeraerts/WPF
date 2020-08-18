@@ -21,6 +21,27 @@
 
 
 ---
+## Version 4.7.0 (2020-08-12)
+### Added
+- Get computer make
+- Get computer model
+- Get computer BIOS
+- Get Dell Service Tag
+- WPF Runout check
+
+### Changed
+- NETSH Network info IPv4 & IPv6
+- variable names with $
+- Skip WPF Total Lapse time with runout
+
+### Fixed
+- Blank out SHA256 check file
+- Debug dump for IPv4 IPv6
+- Debug dump RSAT status
+- clean rsat
+
+
+---
 ## Version 4.6.0 (2020-07-30)
 ### Added
 - info CloneZilla image file name
