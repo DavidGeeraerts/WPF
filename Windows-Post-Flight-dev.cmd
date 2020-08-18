@@ -36,10 +36,10 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.6.0
-SET SCRIPT_BUILD=20200730-0911
+SET SCRIPT_VERSION=4.7.0
+SET SCRIPT_BUILD=20200818-0844
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
-mode con:cols=70
+mode con:cols=72
 mode con:lines=45
 Prompt WPF$G
 color 9E
@@ -514,11 +514,20 @@ ECHO Logs can be found here: %LOG_LOCATION%
 ECHO %SCRIPT_NAME% log file: %LOG_FILE%
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: General Information...) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt (
-	FOR /F "tokens=2-5 delims=()&" %%S IN ('systeminfo ^| FIND /I "Time Zone"') Do ECHO %%S%%T%%U%%V > %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
-	) && IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_TimeZone= < %LOG_LOCATION%\var\var_systeminfo_TimeZone.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %var_TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Generate SystemInfo file
+systeminfo > "%LOG_LOCATION%\SystemInfo.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\systeminfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+
+
+:: TimeZone
+FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %$TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Script Information
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	SCRIPT_VERSION: %SCRIPT_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	SCRIPT_BUILD: %SCRIPT_BUILD% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Minimum config file {%CONFIG_FILE_NAME%} version {%WPF_CONFIG_SCHEMA_VERSION_MIN%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -529,43 +538,72 @@ IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DA
 IF EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Run ID: %WPF_RUN_ID% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Computer Information
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
+:: Manufacturer
+FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Manufacturer:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P > "%LOG_LOCATION%\var\var_systeminfo_SystemManufacturer.txt"
+SET /P $MANUFACTURER= < "%LOG_LOCATION%\var\var_systeminfo_SystemManufacturer.txt"
+for /f "tokens=* delims= " %%P IN ("%$MANUFACTURER%") DO SET $MANUFACTURER=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Manufacturer: %$MANUFACTURER% >> %LOG_LOCATION%\%LOG_FILE%
+:: Model
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Model:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_SystemModel.txt"
+SET /P $MODEL= < "%LOG_LOCATION%\var\var_systeminfo_SystemModel.txt"
+for /f "tokens=* delims= " %%P IN ("%$MODEL%") DO SET $MODEL=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_LOCATION%\%LOG_FILE%
+:: Serial Number
+::	If Dell, this is the Service Tag
+FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic bios get SerialNumber /value') DO SET $SERIAL_NUMBER=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Serial Number: %$SERIAL_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
+:: BIOS
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_BIOS.txt"
+SET /P $BIOS= < "%LOG_LOCATION%\var\var_systeminfo_BIOS.txt"
+for /f "tokens=* delims= " %%P IN ("%$BIOS%") DO SET $BIOS=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	BIOS: %$BIOS% >> %LOG_LOCATION%\%LOG_FILE%
 :: Acquire UUID
 IF NOT EXIST "%LOG_LOCATION%\var\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\var\var_UUID.txt
-SET /P UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %UUID% >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get CloneZilla image name from file
 IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	CloneZilla image file not found! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CloneZilla image file expected location [%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt] >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" SET /P $CLONEZILLA_IMAGE= < "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt"
 IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CloneZilla Image: %$CLONEZILLA_IMAGE% >> %LOG_LOCATION%\%LOG_FILE%
+:: Hostname
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
 
-:: Future may need to use NETSH interface {ipv4/ipv6} show addresses
-:: Simple IPv4 extraction --only works for 1 NIC
-FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
-SET /P VAR_IPv4= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IPv4% >> %LOG_LOCATION%\%LOG_FILE%
-:: Simple IPv6 extraction --only works for 1 NIC
-FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
-SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
+:: Networking
+::	Find Wired Ethernet
+FOR /F "tokens=4-5 delims= " %%P IN ('netsh interface show interface ^| FIND /I "Ethernet"') DO ECHO %%P %%Q>"%LOG_LOCATION%\var\var_NETSH_Interface.txt"
+SET /P $INTERFACE_NAME= < "%LOG_LOCATION%\var\var_NETSH_Interface.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $INTERFACE_NAME: %$INTERFACE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
+::	most default ethernet adapters will be "Ethernet"
+::	some computers may have a "Ethernet 2"
+FIND /I "2" "%LOG_LOCATION%\var\var_NETSH_Interface.txt"
+::	making sure there are no spaces
+IF %ERRORLEVEL% NEQ 0 SET "$INTERFACE_NAME=Ethernet"
+::	only relevant if not default
+IF NOT "%$INTERFACE_NAME%"=="Ethernet" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $INTERFACE_NAME: %$INTERFACE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
 
-:: fancy parsing for proper output of info
-IF NOT EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt) ELSE (
-	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (systeminfo > %LOG_LOCATION%\var\var_systeminfo.txt)
-	) && (
-	IF EXIST "%LOG_LOCATION%\var\var_systeminfo.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_systeminfo.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
-	)
-IF NOT EXIST %LOG_LOCATION%\var\var_systeminfo_OsName.txt (
-	FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt
-	 ) ELSE (
-		IF EXIST %LOG_LOCATION%\FirstTimeRun.txt FOR /F "tokens=3-6" %%G IN ('systeminfo ^| FIND /I "OS NAME"') DO ECHO OS Name: %%G %%H %%I %%J > %LOG_LOCATION%\var\var_systeminfo_OsName.txt 
-	 ) && (
-		IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
-		)
-SET /P var_SYSTEMINFO= < %LOG_LOCATION%\var\var_systeminfo.txt
-SET /P var_SYSTEMINFO_OSNAME= < %LOG_LOCATION%\var\var_systeminfo_OsName.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_SYSTEMINFO_OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
+:: Simple IPv4 extraction --only works for default "Ethernet" NIC
+netsh interface ipv4 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
+FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "IP Address:" "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"') DO SET $IPV4=%%P
+for /f "tokens=* delims= " %%P IN ("%$IPV4%") DO SET $IPV4=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %$IPV4% >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Simple IPv6 extraction --only works for default "Ethernet" NIC
+netsh interface ipv6 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
+IF EXIST "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt" DEL /Q /F "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
+FOR /F "tokens=2 delims= " %%P IN ('FINDSTR /R /C:"Address" "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"') DO ECHO %%P >> "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
+SET /P $IPV6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %$IPV6% >> %LOG_LOCATION%\%LOG_FILE%
+
+
+:: OS NAME
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_OSName.txt"
+IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	File [%LOG_LOCATION%\var\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $OSNAME= < "%LOG_LOCATION%\var\var_systeminfo_OSName.txt"
+:: Remove spaces
+for /f "tokens=* delims= " %%P IN ("%$OSNAME%") DO SET $OSNAME=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Name: %$OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Get Windows version (Based on release ID --more relevant for Windows 10)
 FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_Windows_Version.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var\var_Windows_Version.txt
@@ -614,6 +652,8 @@ IF NOT EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %I
 IF EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" SET /P WPF_SHA256= < "%~dp0\%SCRIPT_NAME%_SHA256.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: %SCRIPT_NAME%_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" DEL /F /Q "%LOG_LOCATION%\WPF_SHA256_check.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_SHA256_check.txt} just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+::	blank out the SHA256 check file
+IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" DEL /Q /F "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
 IF NOT EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%~dp0\%POST_FLIGHT_CMD_NAME%" SHA256') DO ECHO %%P>> %LOG_LOCATION%\var\var_WPF_SHA256_check.txt
 IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK= < "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -629,7 +669,15 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	-------------------------------------------------
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is numeric-alpha sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
 
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $BIOS: {%$BIOS%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $CLONEZILLA_IMAGE: {%$CLONEZILLA_IMAGE%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $IPv4: {%$IPv4%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $IPv6:	{%$IPv6%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $MANUFACTURER: {%$MANUFACTURER%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $MODEL: {%$MODEL%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $SERIAL_NUMBER: {%$SERIAL_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $TimeZone: {%$TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_NETLOGON: {%AD_NETLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_COMPUTER_OU: {%AD_COMPUTER_OU%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -649,8 +697,6 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_DRIVE_VOLUME_LABEL: {%SEED_DRIVE_V
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE_LOCATION: {%HOST_FILE_DATABASE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE: {%HOST_FILE_DATABASE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ISO_DATE: {%ISO_DATE%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: IPv4: {%VAR_IPv4%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: IPv6:	{%VAR_IPv6%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOCAL_ADMIN_PW_FILE: {%LOCAL_ADMIN_PW_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LOCATION: {%LOG_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_FILE: {%LOG_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -682,17 +728,17 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REPO_SHA256_URI: {%REPO_SHA256_URI%} >>
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REQUIRE_REPO_SHA256_CHECK: {%REQUIRE_REPO_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64: {%RSAT_PACKAGE_W10x64%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_STATUS: {RSAT_STATUS} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_STATUS: {%RSAT_STATUS%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: START_TIME: {%START_TIME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SYSTEM UUID: %UUID% >> %LOG_LOCATION%\%LOG_FILE%
+
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO_OSNAME%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_TimeZone: {%var_TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
+
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI: {%var_WHOAMI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI_FQDN: {%var_WHOAMI_FQDN%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -1841,7 +1887,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Unattend.xml cle
 
 :: Cleanup up RSAT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Cleanup... >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_STATUS% EQU 1 GoTo skipCRSAT
+IF %DEBUG_MODE% EQU 1 GoTo skipCRSAT
+IF %RSAT_STATUS% EQU 0 GoTo skipCRSAT
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" GoTo skipCRSAT
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Removing RSAT from the system... >> %LOG_LOCATION%\%LOG_FILE%
 FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /Remove-capability /CapabilityName:%%P
@@ -2157,10 +2204,12 @@ GoTo jump8
 :err100
 :: ERROR 100 (Everything already ran)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error100 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [INFO]	EVERYTHING IS ALREADY DONE? >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [INFO]	%PROCESS_COMPLETE_FILE% Exists! >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [INFO]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	EVERYTHING IS ALREADY DONE? >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_COMPLETE_FILE% Exists! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% ECHO %DATE% %TIME% %SCRIPT_NAME%_%SCRIPT_VERSION% ATTEMPTED BUT ABORTED! >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
+ECHO %ISO_DATE% %TIME% EVERYTHING IS ALREADY DONE! > %LOG_LOCATION%\WPF_runout.txt
+IF EXIST "%LOG_LOCATION%\WPF_runout.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	WPF_runout.txt file created! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error100 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo endc
 
@@ -2172,14 +2221,14 @@ GoTo endc
 :: FUNCTION: End Time
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION end time >> %LOG_LOCATION%\%LOG_FILE%
 :: Calculate lapse time by capturing end time
-SET END_TIME=%TIME%
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: END_TIME: %END_TIME% >> %LOG_LOCATION%\%LOG_FILE%
+SET $END_TIME=%TIME%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $END_TIME: %$END_TIME% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION end time >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Calculate the actual lapse time
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION lapse time... >> %LOG_LOCATION%\%LOG_FILE%
 IF %PS_STATUS% EQU 0 GoTo skipPSLT
-@PowerShell.exe -c "$span=([datetime]'%End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var_Time_Lapse.txt
+@PowerShell.exe -c "$span=([datetime]'%$End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var_Time_Lapse.txt
 IF EXIST %LOG_LOCATION%\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var_Time_Lapse.txt
 IF EXIST "%LOG_LOCATION%\var" MOVE /Y "%LOG_LOCATION%\var_Time_Lapse.txt" "%LOG_LOCATION%\var"
 IF NOT EXIST "%LOG_LOCATION%\var" IF %VAR_CLEANUP% EQU 1 DEL /F /Q "%LOG_LOCATION%\var_Time_Lapse.txt"
@@ -2192,6 +2241,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION lapse t
 
 :: Calculate the total time lapse
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Total lapse time... >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\WPF_runout.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Skipping total lapse time due to WPF_Runout. >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\WPF_runout.txt" GoTo skipTLT
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Skipping total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo skipTLT
 SET /P WPF_START_TIME= < "%LOG_LOCATION%\WPF_Start_Time.txt"
@@ -2248,6 +2299,8 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
 :: Kill the running file
 IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q /F "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
+::	kill the runout file
+IF EXIST "%LOG_LOCATION%\WPF_runout.txt" DEL /Q /F "%LOG_LOCATION%\WPF_runout.txt"
 ENDLOCAL
 TIMEOUT 30
 EXIT

@@ -1,0 +1,17 @@
+# ToDo Windows Post Flight
+
+
+
+
+
+
+
+
+# DONE
+
+
+2020-08-11
+- Get computer make
+- Get computer model
+- Get computer BIOS
+- Get Dell Service Tag
