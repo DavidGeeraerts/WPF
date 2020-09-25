@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.7.0
-SET SCRIPT_BUILD=20200818-0844
+SET SCRIPT_VERSION=4.7.1
+SET SCRIPT_BUILD=20200925-0800
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -668,7 +668,6 @@ IF %LOG_LEVEL_DEBUG% EQU 0 GoTo varE
 ECHO %ISO_DATE% %TIME% [DEBUG]	------------------------------------------------------------------- >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE DEBUG is numeric-alpha sorted. >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Directory: {%CD%} >> %LOG_LOCATION%\%LOG_FILE%
-
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $BIOS: {%$BIOS%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $CLONEZILLA_IMAGE: {%$CLONEZILLA_IMAGE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $IPv4: {%$IPv4%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -735,10 +734,8 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: START_TIME: {%START_TIME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
-
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO_OSNAME%} >> %LOG_LOCATION%\%LOG_FILE%
-
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI: {%var_WHOAMI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI_FQDN: {%var_WHOAMI_FQDN%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -1572,8 +1569,16 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE%%TIME%	START... >> %LOG_LOCATION%\Windows_Update_Powershell.log
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Processing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
+@powershell Get-WindowsUpdate 2> nul
+IF %ERRORLEVEL% EQU 0 GoTo jumpWU
+:: by default for non-domain joined computers, may require security config
+@powershell Get-ExecutionPolicy -list >> %LOG_LOCATION%\Windows_Update_Powershell.log
+@powershell Set-ExecutionPolicy -ExecutionPolicy Unrestricted -scope CurrentUser -Force >> %LOG_LOCATION%\Windows_Update_Powershell.log
+@powershell Get-ExecutionPolicy -list >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Install-PackageProvider -name NuGet -Force >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Install-Module -name PSWindowsUpdate -Force >> %LOG_LOCATION%\Windows_Update_Powershell.log
+::	Check if WindowsUpdate commandlet already installed
+:jumpWU
 ECHO List of updates: >> %LOG_LOCATION%\Windows_Update_Powershell.log
 ECHO ########################################################################## >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WindowsUpdate >> %LOG_LOCATION%\Windows_Update_Powershell.log

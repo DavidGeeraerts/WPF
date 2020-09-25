@@ -25,7 +25,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows-Post-Flight_Seed_Updater
-SET Version=2.3.0
+SET Version=2.5.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -47,6 +47,7 @@ SET FLASH_DRIVE_VOLUME_KEYWORD=POSTFLIGHT
 SET SEED_SOURCE_WPF=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight
 SET SEED_SOURCE_CHOCO=D:\David_Geeraerts\Projects\Script Code\Chocolatey
 SET SEED_SOURCE_ULTI=D:\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet
+SET SEED_SOURCE_MODULES=D:\David_Geeraerts\Projects\Script Code\modules
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
 ::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
@@ -76,6 +77,7 @@ echo.
 SET "SEED_SOURCE_WPF=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows Post-Flight"
 SET "SEED_SOURCE_CHOCO=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Chocolatey"
 SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet"
+SET "SEED_SOURCE_MODULES=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\modules"
 :skipD
 
 
@@ -104,15 +106,31 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLU
 :: Shortcut Link
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight.lnk /R:2 /W:5
 
-:: Ultimate script
+:: Ultimate script (Playbook)
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice.cmd /R:2 /W:5
 
-IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
-IF EXIST %FLASH_DRIVE_VOLUME% GoTo EOF
+::	modules
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_MODULES%" "%FLASH_DRIVE_VOLUME%\modules" *.* /MIR /R:2 /W:5 /XD .git
 
 :: Make password files hidden
 IF EXIST %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt
 IF EXIST %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt
+
+:: Session file for last updated
+ECHO %DATE% %TIME% Updated! > "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+for /f "skip=1 tokens=2 delims==" %%P IN ('wmic TIMEZONE GET StandardName /VALUE') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+for /f "skip=1 tokens=2 delims==" %%P IN ('wmic timezone get caption /value') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+
+::wmic TIMEZONE GET StandardName /VALUE >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+::wmic TIMEZONE GET Caption /VALUE >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+
+:: Report out
+IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
+IF EXIST %FLASH_DRIVE_VOLUME% GoTo End
+
+
+
+
 
 :error00
 cls
@@ -120,7 +138,7 @@ IF NOT EXIST %FLASH_DRIVE_VOLUME% COLOR 4A
 IF NOT EXIST %FLASH_DRIVE_VOLUME% ECHO No flash drive was found with volume label [%FLASH_DRIVE_VOLUME_KEYWORD%]!
 TIMEOUT /T 900
 
-:EOF
+:End
 ENDLOCAL
 TIMEOUT /T 300
 EXIT

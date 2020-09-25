@@ -21,6 +21,13 @@
 
 
 ---
+
+## Version 4.7.1 (2020-09-25)
+### Added
+- WindowsUpdate powershell check to speed up process
+
+---
+
 ## Version 4.7.0 (2020-08-12)
 ### Added
 - Get computer make
@@ -42,6 +49,7 @@
 
 
 ---
+
 ## Version 4.6.0 (2020-07-30)
 ### Added
 - info CloneZilla image file name

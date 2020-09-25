@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=3.6.0
+SET Version=3.7.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -90,6 +90,13 @@ IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_
 
 CD /D %FLASH_DRIVE_VOLUME%\
 
+::	Reset Attribute
+attrib -H Local_Administrator_Password.txt
+attrib -H Domain_Join_Password.txt
+attrib -A /S /D
+attrib +H Local_Administrator_Password.txt
+attrib +H Domain_Join_Password.txt
+
 :run
 :: Main WPF commandlet and config file
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight-dev.cmd /R:2 /W:5
@@ -130,10 +137,12 @@ echo SHA256 updated.
 echo.
 :: Session file for last updated
 ECHO %DATE% %TIME% Updated! > "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+for /f "skip=1 tokens=2 delims==" %%P IN ('wmic TIMEZONE GET StandardName /VALUE') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+for /f "skip=1 tokens=2 delims==" %%P IN ('wmic timezone get caption /value') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
 
 
 :: When complete
-IF EXIST %FLASH_DRIVE_VOLUME% dir /O-D %FLASH_DRIVE_VOLUME% 
+IF EXIST %FLASH_DRIVE_VOLUME% dir /A:A /O-DN %FLASH_DRIVE_VOLUME% 
 IF EXIST %FLASH_DRIVE_VOLUME% GoTo End
 
 
