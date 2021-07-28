@@ -22,11 +22,21 @@
 
 ---
 
+## Version 4.8.0 (2021-07-27)
+### Added
+- Powershell Get-ComputerInfo to file
+
+### Changed
+- If not running with administrative privelege, will immediately go to error.
+- Timezone check, more efficient
+
+---
+
+
 ## Version 4.7.1 (2020-09-25)
 ### Added
 - WindowsUpdate powershell check to speed up process
 
----
 
 ## Version 4.7.0 (2020-08-12)
 ### Added

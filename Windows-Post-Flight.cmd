@@ -36,8 +36,8 @@ SETLOCAL Enableextensions
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.7.1
-SET SCRIPT_BUILD=20200925-0800
+SET SCRIPT_VERSION=4.8.0
+SET SCRIPT_BUILD=20210727-10:00
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -222,6 +222,13 @@ ECHO *
 ECHO **************************************************************************
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Check if running with Administrative Privilege
+openfiles.exe 2>nul
+SET ADMIN_STATUS=%ERRORLEVEL%
+IF %ADMIN_STATUS% EQU 1 GoTo err05
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 :: Powershell Check
 ECHO.
@@ -234,10 +241,12 @@ IF NOT DEFINED PSModulePath GoTo skipChkPS
 IF DEFINED PSModulePath (@powershell $PSVersionTable.PSVersion > %LOG_LOCATION%\var\var_PS_Version.txt) && (SET PS_STATUS=1)
 
 :checkPS
-FOR /F "usebackq skip=3 tokens=1 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_MAJOR_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=2 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_MINOR_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=3 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_BUILD_VERSION=%%P"
-FOR /F "usebackq skip=3 tokens=4 delims= " %%P IN ("%LOG_LOCATION%\var\var_PS_Version.txt") DO SET "PS_REVISION_VERSION=%%P"
+FOR /F "usebackq skip=3 tokens=1-4 delims= " %%P IN ("%LOG_LOCATION%\PS_Version.txt") DO (
+	SET "$PS_MAJOR_VERSION=%%P"
+	SET "$PS_MINOR_VERSION=%%Q"
+	SET "$PS_BUILD_VERSION=%%R"
+	SET "$PS_REVISION_VERSION=%%S"
+	)
 :skipChkPS
 
 :fISO8601
@@ -516,15 +525,21 @@ ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: General Information...) >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Generate SystemInfo file
+::	new file on each run to capture changes.
 systeminfo > "%LOG_LOCATION%\SystemInfo.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\systeminfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-
+IF %PS_STATUS% EQU 1 @powershell Get-ComputerInfo> "%LOG_LOCATION%\ComputerInfo.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\ComputerInfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 
 :: TimeZone
+IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" SET /P $TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+IF DEFINED $TimeZone for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
+IF DEFINED $TimeZone GoTo skipTZ
 FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
 IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P $TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
 for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
+:skipTZ
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %$TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Script Information
@@ -2002,32 +2017,37 @@ GoTo feTime
 :: ERROR 05 Not running with Administrative Privilege
 CLS
 Color 4E
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error05 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	The account running {%SCRIPT_NAME%} does not have administrative privileges! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
+::IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error05 >> %LOG_LOCATION%\%LOG_FILE%
+::IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	The account running {%SCRIPT_NAME%} does not have administrative privileges! >> %LOG_LOCATION%\%LOG_FILE%
+::IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Aborting {%SCRIPT_NAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 :: CONSOLE Output
-ECHO **************************************************************************
+ECHO ************************************************************************
 ECHO * 
-ECHO * %SCRIPT_NAME% %SCRIPT_VERSION%
+ECHO *	%SCRIPT_NAME% %SCRIPT_VERSION%
 ECHO *
-ECHO * %DATE% %TIME%
+ECHO *		%DATE% %TIME%
 ECHO *
-ECHO **************************************************************************
+ECHO ************************************************************************
 ECHO.
 ECHO.
-ECHO The account running {%SCRIPT_NAME%} does not have administrative privileges!
+ECHO 		!!FATAL ERROR!!	!!FATAL ERROR!!
+echo.
+ECHO  The account running {%SCRIPT_NAME%}
+echo  does not have administrative privileges!
 ECHO.
-ECHO Aborting {%SCRIPT_NAME%}!
+ECHO  Aborting {%SCRIPT_NAME%}!
 ECHO.
 ECHO.
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
+echo %USERNAME% %SCRIPT_NAME% %SCRIPT_VERSION% %DATE% %TIME% > "%PUBLIC%\Documents\WPF_FATAL_ERROR_Administrative.txt"
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
+::IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+::IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
+::IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 500
-GoTo feTime
+::GoTo feTime
+EXIT
 
 :err06
 :: ERROR 06 Failed SHA256 check against repo.
@@ -2048,7 +2068,7 @@ IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LO
 IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error06 >> %LOG_LOCATION%\%LOG_FILE%
-TIMEOUT 500
+TIMEOUT 300
 GoTo feTime
 
 
