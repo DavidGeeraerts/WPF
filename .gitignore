@@ -22,3 +22,5 @@ Windows_Post-Flight-beta\.cmd
 Windows_Post-Flight-beta\.config
 
 var_get_WPF_SHA256.txt
+
+~archive/

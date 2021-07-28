@@ -1,26 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--*************************************************
-Organization:	The Evergreen State College
-Location: 		Olympia, WA USA
-Department:		Sciences
-Author:			David Geeraerts
-Position:		Scientific Computing Manager
-
-Build:			2020-09-22 1400
-
-Notes: 
-
-Unattend Order:
-[https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview#implicit-answer-file-search-order]
-#1	Registry: HKEY_LOCAL_MACHINE\System\Setup\UnattendFile <Unattend.xml>
-#2	%WINDIR%\Panther\Unattend\{Unattend.xml or Autounattend.xml}
-#3	%WINDIR%\Panther --Windows Cache for answer file; DO NOT MODIFY!
-#4	Removable Media read/wrtie --at the root of the drive
-#5	Removable Media read-only --at the root of the drive
-#6	%WINDIR%\System32\Sysprep
-#7	%SYSTEMDRIVE%
-#8	Drive from where Windows setup is running
-**************************************************-->
+<!--*************************************************-->
+<!--Organization:	The Evergreen State College-->
+<!--Location: 		Olympia, WA USA-->
+<!--Department:		Sciences-->
+<!--Author:			David Geeraerts-->
+<!--Position:		Scientific Computing Manager-->
+<!--Build:			2020-09-25 1030-->
+<!--Notes: -->
+<!--Unattend Order:-->
+<!--[https://docs.microsoft.com/en-us/windows-hardware/manufacture/desktop/windows-setup-automation-overview#implicit-answer-file-search-order]-->
+<!--#1	Registry: HKEY_LOCAL_MACHINE\System\Setup\UnattendFile <Unattend.xml>-->
+<!--#2	%WINDIR%\Panther\Unattend\{Unattend.xml or Autounattend.xml}-->
+<!--#3	%WINDIR%\Panther  Windows Cache for answer file; DO NOT MODIFY!-->
+<!--#4	Removable Media read/wrtie at the root of the drive-->
+<!--#5	Removable Media read-only at the root of the drive-->
+<!--#6	%WINDIR%\System32\Sysprep-->
+<!--#7	%SYSTEMDRIVE%-->
+<!--#8	Drive from where Windows setup is running-->
+<!--**************************************************-->
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="windowsPE">
         <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -124,6 +121,7 @@ Unattend Order:
             <RegisteredOrganization>The Evergreen State College</RegisteredOrganization>
             <RegisteredOwner>Sciences</RegisteredOwner>
             <ShowPowerButtonOnStartScreen>true</ShowPowerButtonOnStartScreen>
+            <TimeZone>UTC-800 Pacific Time (US &amp; Canada)</TimeZone>
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -179,7 +177,16 @@ Unattend Order:
                     <SkipAdministratorProfileRemoval>true</SkipAdministratorProfileRemoval>
                 </VMModeOptimizations>
                 <HideEULAPage>true</HideEULAPage>
+                <ProtectYourPC>1</ProtectYourPC>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
             </OOBE>
+        </component>
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <InputLocale>0409:00000409</InputLocale>
+            <SystemLocale>en-US</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UILanguageFallback>en-US</UILanguageFallback>
+            <UserLocale>en-US</UserLocale>
         </component>
     </settings>
     <cpi:offlineImage cpi:source="wim:e:/sources/install.wim#Windows 10 Enterprise" xmlns:cpi="urn:schemas-microsoft-com:cpi" />

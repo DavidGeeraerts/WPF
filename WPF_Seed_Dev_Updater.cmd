@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Seed_Updater
-SET Version=3.7.0
+SET Version=3.7.2
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -40,14 +40,14 @@ mode con:lines=50
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Master PC
-SET MASTER_PC=SC-Sphere
+SET MASTER_PC=SC-Sphere-2
 
 :: Default Flash Drive Volume
 SET FLASH_DRIVE_VOLUME=F:
 SET FLASH_DRIVE_VOLUME_KEYWORD=POSTFLIGHT
-SET SEED_SOURCE_WPF=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight
-SET SEED_SOURCE_CHOCO=D:\David_Geeraerts\Projects\Script Code\Chocolatey
-SET SEED_SOURCE_ULTI=D:\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet
+SET "SEED_SOURCE_WPF=D:\Projects\Script Code\Windows Post-Flight"
+SET "SEED_SOURCE_CHOCO=D:\Projects\Script Code\Chocolatey"
+SET "SEED_SOURCE_ULTI=D:\Projects\Script Code\Windows_Ultimate_Commandlet"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
 ::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
@@ -74,16 +74,16 @@ echo.
 
 :: Determine where running from: Master or elsewhere
 (hostname | find /I "%MASTER_PC%" 2> nul) && GoTo skipD
-SET "SEED_SOURCE_WPF=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows Post-Flight"
-SET "SEED_SOURCE_CHOCO=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Chocolatey"
-SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\David_Geeraerts\Projects\Script Code\Windows_Ultimate_Commandlet"
+SET "SEED_SOURCE_WPF=\\%MASTER_PC%\D$\Projects\Script Code\Windows Post-Flight"
+SET "SEED_SOURCE_CHOCO=\\%MASTER_PC%\D$\Projects\Script Code\Chocolatey"
+SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\Projects\Script Code\Windows_Ultimate_Commandlet"
 :skipD
 
 
-(DIR %FLASH_DRIVE_VOLUME% 2> nul) | (FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" 2> nul) && GoTo run
+IF EXIST %FLASH_DRIVE_VOLUME% (DIR %FLASH_DRIVE_VOLUME% 2> nul) | (FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" 2> nul) && GoTo run
 :: IF NOT THE DEFAULT FLASH DRIVE VOLUME FIND IT
 SET FLASH_DRIVE_VOLUME=0
-FOR /F "tokens=* delims=:" %%F IN ('FSUTIL VOLUME LIST') DO DIR %%F | (FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" 2> nul) && SET FLASH_DRIVE_VOLUME=%%F
+FOR /F "skip=1 tokens=* delims=:" %%F IN ('FSUTIL VOLUME LIST') DO (DIR %%F 2> nul) | (FIND /I "%FLASH_DRIVE_VOLUME_KEYWORD%" 2> nul) && SET FLASH_DRIVE_VOLUME=%%F
 IF EXIST %FLASH_DRIVE_VOLUME% FOR /F "tokens=1 delims=\" %%P IN ("%FLASH_DRIVE_VOLUME%") DO SET FLASH_DRIVE_VOLUME=%%P
 IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_VOLUME% will be updated!)
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

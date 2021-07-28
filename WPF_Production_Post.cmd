@@ -7,9 +7,6 @@
 :: GNU GPL Version 3
 :: https://www.gnu.org/licenses/gpl.html
 
-:: Creative Commons: Attribution-NonCommercial-ShareAlike 3.0 Unported (CC BY-NC-SA 3.0)  
-:: http://creativecommons.org/licenses/by-nc-sa/3.0/
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: VERSIONING INFORMATION
@@ -25,7 +22,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Production_Post
-SET Version=1.0.0
+SET Version=1.0.1
 Title %Name% Version:%Version%
 Prompt WPFPU$G
 color 0B
@@ -39,7 +36,7 @@ mode con:lines=50
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Master REPO
-SET "MASTER_SOURCE_WPF=D:\David_Geeraerts\Projects\Script Code\Windows Post-Flight"
+SET "MASTER_SOURCE_WPF=D:\Projects\Script Code\Windows Post-Flight"
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
