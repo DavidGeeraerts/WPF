@@ -2,12 +2,51 @@
 
 
 
+- Break out Windows Ultimate Playbook from post-flight
 
+- Windows ultimate freezes on SAS JMP --check /B
 
+- RSAT via DISM prompting for reboot
 
+- Rename VAR to Cache
 
+- main log folder too busy
+	System folder?
+	
+- Pull the "Code Name" from the registry:
+
+REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "DisplayVersion"
+
+- Wireless [wi-fi] doesn't parse IPv4 correctly since using netsh
+	netsh interface ipv4 show addresses wi-fi
+	need to find the "connected" interface
+	netsh interface show interface
+		"connected"
+
+- Maual initiation of post-flight only runs up to domain join.
+- After reboot, did not kick off WPF from scheduled task, despite being there.
+- [INFO]	OS Name: Microsoft Windows 11 Pro 
+- [INFO]	Windows 10 version: 2009 #not to hard code, take from OS Name
+- [INFO]	Working on Chocolatey package management... #what choco list is being used?
+
+- include in Running_Chocolatey.txt file #what choco list is being used?
+
+- create a choco summary log shortcut in WPF logs
+
+- Don't install MS SilverLight KB4481252
+
+- Windows 11 laptop ran through complete WPF. didn't reboot after completion --was logged in.
+
+- Send hardware files to log server
+
+- wmic cpu get name,caption /value
+
+for /f "tokens=2 delims==" %%P IN ('wmic path SoftwareLicensingService get OA3xOriginalProductKey /Value') DO set $OS_PRODUCT_KEY=%%P
 
 # DONE
+
+2021-12-22
+- Get PID for program
 
 
 2020-08-11
