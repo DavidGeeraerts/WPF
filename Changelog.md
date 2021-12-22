@@ -22,6 +22,19 @@
 
 ---
 
+## Version 4.9.0 (2021-12-22)
+### Added
+- PID
+
+### Changed
+- moved WPF_Start_Time.txt into var folder 
+
+### Removed
+- WPF_Start_Time.txt deletion if delete var selected since already in var folder.
+
+---
+
+
 ## Version 4.8.0 (2021-07-27)
 ### Added
 - Powershell Get-ComputerInfo to file
@@ -29,9 +42,6 @@
 ### Changed
 - If not running with administrative privelege, will immediately go to error.
 - Timezone check, more efficient
-
----
-
 
 ## Version 4.7.1 (2020-09-25)
 ### Added
