@@ -34,8 +34,8 @@
 SETLOCAL Enableextensions
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.9.0
-SET SCRIPT_BUILD=20211222
+SET SCRIPT_VERSION=4.10.0
+SET SCRIPT_BUILD=20211223
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -59,7 +59,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.6.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.7.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -175,10 +175,10 @@ SET LOG_LEVEL_TRACE=0
 :: 1 = ON (YES)
 SET DEBUG_MODE=0
 
-:: To cleanup or Not to cleanup, var folder
+:: To cleanup or Not to cleanup, cache folder
 ::  0 = OFF (NO)
 ::  1 = ON (YES)
-SET VAR_CLEANUP=1
+SET CACHE_CLEANUP=1
 
 :: PROCESS CHECK
 ::  (possible future expansion)
@@ -233,10 +233,10 @@ ECHO.
 ECHO Checking on Powershell...
 IF DEFINED PSModulePath (SET PS_STATUS=1) ELSE (SET PS_STATUS=0)
 IF NOT EXIST "%LOG_LOCATION%" SET "LOG_LOCATION=%TEMP%"
-IF NOT EXIST "%LOG_LOCATION%\var" MD "%LOG_LOCATION%\var" 
-IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo checkPS
+IF NOT EXIST "%LOG_LOCATION%\cache" MD "%LOG_LOCATION%\cache" 
+IF EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" GoTo checkPS
 IF NOT DEFINED PSModulePath GoTo skipChkPS
-IF DEFINED PSModulePath (@powershell $PSVersionTable.PSVersion > %LOG_LOCATION%\var\var_PS_Version.txt) && (SET PS_STATUS=1)
+IF DEFINED PSModulePath (@powershell $PSVersionTable.PSVersion > %LOG_LOCATION%\cache\var_PS_Version.txt) && (SET PS_STATUS=1)
 
 :checkPS
 FOR /F "usebackq skip=3 tokens=1-4 delims= " %%P IN ("%LOG_LOCATION%\PS_Version.txt") DO (
@@ -250,8 +250,8 @@ FOR /F "usebackq skip=3 tokens=1-4 delims= " %%P IN ("%LOG_LOCATION%\PS_Version.
 :fISO8601
 :: Function to ensure ISO 8601 Date format yyyy-mmm-dd
 :: Easiest way to get ISO date
-@powershell Get-Date -format "yyyy-MM-dd" > "%LOG_LOCATION%\var\var_ISO8601_Date.txt"
-SET /P ISO_DATE= < "%LOG_LOCATION%\var\var_ISO8601_Date.txt"
+@powershell Get-Date -format "yyyy-MM-dd" > "%LOG_LOCATION%\cache\var_ISO8601_Date.txt"
+SET /P ISO_DATE= < "%LOG_LOCATION%\cache\var_ISO8601_Date.txt"
 :skipPS
 
 :: Fallback if PowerShell not available
@@ -386,8 +386,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_FATAL" "%~dp0\%CONFI
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_DEBUG" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_DEBUG=%%V"
 ::   LOG_LEVEL_TRACE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"LOG_LEVEL_TRACE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "LOG_LEVEL_TRACE=%%V"
-::   VAR_CLEANUP
-FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"VAR_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "VAR_CLEANUP=%%V"
+::   CACHE_CLEANUP
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"CACHE_CLEANUP" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "CACHE_CLEANUP=%%V"
 :: DEBUG_MODE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"DEBUG_MODE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "DEBUG_MODE=%%V"
 :: DEBUGGER
@@ -416,32 +416,32 @@ ECHO Processing configuration file complete!
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: CHECK TO MAKE SURE LOG LOCATION WORKS!
 IF NOT EXIST %LOG_LOCATION% MD %LOG_LOCATION% || GoTo err00
-IF NOT EXIST "%LOG_LOCATION%\var" MD "%LOG_LOCATION%\var" || GoTo err00
+IF NOT EXIST "%LOG_LOCATION%\cache" MD "%LOG_LOCATION%\cache" || GoTo err00
 IF NOT EXIST "%LOG_LOCATION%\%LOG_FILE%" ECHO First Time Run: %ISO_DATE% %TIME% > %LOG_LOCATION%\FirstTimeRun.txt
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	START DEBUG... >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	START DEBUG... >> %LOG_LOCATION%\%LOG_FILE%)
 IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	ALL logging is turned on from config file!) >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 
-:: Now that logging is configured, move some temp var files
-IF NOT EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" IF EXIST "%TEMP%\var\var_PS_Version.txt" COPY /Y "%TEMP%\var\var_PS_Version.txt" "%LOG_LOCATION%\var" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to [%LOG_LOCATION%\var]. >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var\Script_Start.txt" ECHO %START_TIME%> "%LOG_LOCATION%\var\Script_Start.txt"
-IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\var\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\var\WPF_Start_Time.txt"
-IF NOT EXIST "%LOG_LOCATION%\var\WPF_Start_Time.txt" ECHO %START_TIME%> "%LOG_LOCATION%\var\WPF_Start_Time.txt"
+:: Now that logging is configured, move some temp cache files
+IF NOT EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" IF EXIST "%TEMP%\cache\var_PS_Version.txt" COPY /Y "%TEMP%\cache\var_PS_Version.txt" "%LOG_LOCATION%\cache" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to [%LOG_LOCATION%\cache]. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\cache\Script_Start.txt" ECHO %START_TIME%> "%LOG_LOCATION%\cache\Script_Start.txt"
+IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\cache\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
+IF NOT EXIST "%LOG_LOCATION%\cache\WPF_Start_Time.txt" ECHO %START_TIME%> "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
 ECHO %ISO_DATE% %TIME% Windows Post Flight is running! > %LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt
 ::	create run ID
-IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF NOT EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" ECHO %RANDOM%> %LOG_LOCATION%\var\var_WPF_RUN_ID.txt
-IF EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" SET /P WPF_RUN_ID= <%LOG_LOCATION%\var\var_WPF_RUN_ID.txt
+IF NOT EXIST "%LOG_LOCATION%\cache\var_WPF_RUN_ID.txt" ECHO %RANDOM%> %LOG_LOCATION%\cache\var_WPF_RUN_ID.txt
+IF EXIST "%LOG_LOCATION%\cache\var_WPF_RUN_ID.txt" SET /P WPF_RUN_ID= <%LOG_LOCATION%\cache\var_WPF_RUN_ID.txt
 
 :::: PID ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :PID
 	:: Program information including PID
-	tasklist /FI "WINDOWTITLE eq Administrator:*" > "%LOG_LOCATION%\var\TaskInfo_PID.txt"
-	for /F "skip=3 tokens=2 delims= " %%P IN ('tasklist /FI "WINDOWTITLE eq Administrator:*"') DO echo %%P> "%LOG_LOCATION%\var\var_PID.txt"
-	SET /P $PID= < "%LOG_LOCATION%\var\var_PID.txt"
+	tasklist /FI "WINDOWTITLE eq Administrator:*" > "%LOG_LOCATION%\cache\TaskInfo_PID.txt"
+	for /F "skip=3 tokens=2 delims= " %%P IN ('tasklist /FI "WINDOWTITLE eq Administrator:*"') DO echo %%P> "%LOG_LOCATION%\cache\var_PID.txt"
+	SET /P $PID= < "%LOG_LOCATION%\cache\var_PID.txt"
 
 
 :::: DEBUG MODE :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -449,9 +449,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Debug Mode...)
 IF %DEBUG_MODE% EQU 0 GoTo skipDM
 IF NOT DEFINED DEBUG_MODE GoTo skipDM
 IF %DEBUG_MODE% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Debug Mode is turned on! >> %LOG_LOCATION%\%LOG_FILE%
-IF %DEBUG_MODE% EQU 1 (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
+IF %DEBUG_MODE% EQU 1 (SET LOG_LEVEL_ALL=1) && (SET CACHE_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LEVEL_ALL: {%LOG_LEVEL_ALL%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CACHE_CLEANUP: {%CACHE_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 :skipDM
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Debug Mode.) >> %LOG_LOCATION%\%LOG_FILE%
@@ -465,16 +465,16 @@ IF %LOG_LEVEL_ALL% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Host debugger ..
 IF %LOG_LEVEL_ALL% EQU 1 GoTo skipDebug
 IF NOT DEFINED DEBUGGER GoTo skipDebug
 IF %DEBUG_MODE% EQU 1 GoTo skipDebug
-hostname | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
+hostname | (FIND /I "%DEBUGGER%" 2> nul) && (SET LOG_LEVEL_ALL=1) && (SET CACHE_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
 IF %LOG_LEVEL_ALL% EQU 1 IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ALL% EQU 1 GoTo skipDebug
 :: Need to find out who this computer will be
-IF NOT EXIST %LOG_LOCATION%\var\var_Host_MAC.txt GETMAC > %LOG_LOCATION%\var\var_Host_MAC.txt
-IF EXIST %LOG_LOCATION%\var\var_Host_MAC.txt FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\var\var_Host_MAC.txt) DO (FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% 2> nul) && SET HOST_MAC=%%G
+IF NOT EXIST %LOG_LOCATION%\cache\var_Host_MAC.txt GETMAC > %LOG_LOCATION%\cache\var_Host_MAC.txt
+IF EXIST %LOG_LOCATION%\cache\var_Host_MAC.txt FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\cache\var_Host_MAC.txt) DO (FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% 2> nul) && SET HOST_MAC=%%G
 IF NOT DEFINED HOST_MAC GoTo skipDebug
-(FIND "%HOST_MAC%" "%HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%" 2> nul) > %LOG_LOCATION%\var\MAC-2-HOST.txt
-FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\var\MAC-2-HOST.txt") DO SET HOST_STRING=%%G
-IF /I %HOST_STRING%==%DEBUGGER% (SET LOG_LEVEL_ALL=1) && (SET VAR_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
+(FIND "%HOST_MAC%" "%HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%" 2> nul) > %LOG_LOCATION%\cache\MAC-2-HOST.txt
+FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\cache\MAC-2-HOST.txt") DO SET HOST_STRING=%%G
+IF /I %HOST_STRING%==%DEBUGGER% (SET LOG_LEVEL_ALL=1) && (SET CACHE_CLEANUP=0) && (SET SEED_LOCATION_CLEANUP=0)
 IF /I %HOST_STRING%==%DEBUGGER% IF %LOG_LEVEL_DEBUG% EQU 1 (ECHO %ISO_DATE% %TIME% [DEBUG]	All logging turned on by debugger!) >> %LOG_LOCATION%\%LOG_FILE%
 
 :skipDebug
@@ -538,12 +538,12 @@ IF %PS_STATUS% EQU 1 @powershell Get-ComputerInfo> "%LOG_LOCATION%\ComputerInfo.
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\ComputerInfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 
 :: TimeZone
-IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" SET /P $TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt" SET /P $TimeZone= < "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
 IF DEFINED $TimeZone for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
 IF DEFINED $TimeZone GoTo skipTZ
-FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
-IF EXIST "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P $TimeZone= < "%LOG_LOCATION%\var\var_systeminfo_TimeZone.txt"
+FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
+IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $TimeZone= < "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
 for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
 :skipTZ
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Zone: %$TimeZone% >> %LOG_LOCATION%\%LOG_FILE%
@@ -556,18 +556,18 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Minimum config file {%
 :: Script state
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} was created!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF first time run!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\var\var_WPF_RUN_ID.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Run ID: %WPF_RUN_ID% >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\cache\var_WPF_RUN_ID.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Run ID: %WPF_RUN_ID% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF PID: %$PID% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Computer Information
 :: Manufacturer
-FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Manufacturer:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P > "%LOG_LOCATION%\var\var_systeminfo_SystemManufacturer.txt"
-SET /P $MANUFACTURER= < "%LOG_LOCATION%\var\var_systeminfo_SystemManufacturer.txt"
+FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Manufacturer:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P > "%LOG_LOCATION%\cache\var_systeminfo_SystemManufacturer.txt"
+SET /P $MANUFACTURER= < "%LOG_LOCATION%\cache\var_systeminfo_SystemManufacturer.txt"
 for /f "tokens=* delims= " %%P IN ("%$MANUFACTURER%") DO SET $MANUFACTURER=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Manufacturer: %$MANUFACTURER% >> %LOG_LOCATION%\%LOG_FILE%
 :: Model
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Model:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_SystemModel.txt"
-SET /P $MODEL= < "%LOG_LOCATION%\var\var_systeminfo_SystemModel.txt"
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Model:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_SystemModel.txt"
+SET /P $MODEL= < "%LOG_LOCATION%\cache\var_systeminfo_SystemModel.txt"
 for /f "tokens=* delims= " %%P IN ("%$MODEL%") DO SET $MODEL=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_LOCATION%\%LOG_FILE%
 :: Serial Number
@@ -575,13 +575,13 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_
 FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic bios get SerialNumber /value') DO SET $SERIAL_NUMBER=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Serial Number: %$SERIAL_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 :: BIOS
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_BIOS.txt"
-SET /P $BIOS= < "%LOG_LOCATION%\var\var_systeminfo_BIOS.txt"
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
+SET /P $BIOS= < "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
 for /f "tokens=* delims= " %%P IN ("%$BIOS%") DO SET $BIOS=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	BIOS: %$BIOS% >> %LOG_LOCATION%\%LOG_FILE%
 :: Acquire UUID
-IF NOT EXIST "%LOG_LOCATION%\var\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\var\var_UUID.txt
-SET /P $UUID= < "%LOG_LOCATION%\var\var_UUID.txt"
+IF NOT EXIST "%LOG_LOCATION%\cache\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\cache\var_UUID.txt
+SET /P $UUID= < "%LOG_LOCATION%\cache\var_UUID.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get CloneZilla image name from file
 IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	CloneZilla image file not found! >> %LOG_LOCATION%\%LOG_FILE%
@@ -591,82 +591,119 @@ IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_INFO% EQU
 :: Hostname
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME% >> %LOG_LOCATION%\%LOG_FILE%
 
-:: Networking
+
+:: Operating System Information :::::::::::::::::::::::::::::::::::::::::::::::
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Operating System Information... >> %LOG_LOCATION%\%LOG_FILE%
+	:: Parse Windows OS to elements
+	::	should return "Windows"
+	FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS=%%P
+	::	Should return major release, e.g. "10" "11"
+	FOR /F "skip=1 tokens=4 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS_MAJOR=%%P
+	if %$OS_MAJOR%=="Server" FOR /F "skip=1 tokens=5 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS_MAJOR=%%P
+	FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "EditionID"') DO SET $OS_EDITION=%%P
+	FOR /F "tokens=2 delims==" %%P IN ('wmic os GET CAPTION /VALUE') DO SET $OS_CAPTION=%%P
+IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
+IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_OsName.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	File [%LOG_LOCATION%\cache\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $OS_NAME= < "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
+:: Remove spaces
+for /f "tokens=* delims= " %%P IN ("%$OS_NAME%") DO SET $OS_NAME=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Name: %$OS_NAME% >> %LOG_LOCATION%\%LOG_FILE%
+:: Windows ver output
+ver > %LOG_LOCATION%\cache\var_ver.txt
+FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\cache\var_ver.txt) DO SET var_VER=%%V
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
+
+::	Use ReleaseID if server
+::	{Client, Server}
+FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "InstallationType"') DO SET $OS_INSTALLATION_TYPE=%%P
+if %$OS_INSTALLATION_TYPE%==Server (for /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ReleaseId"') DO SET $OS_DISPLAY_VERSION=%%P) ELSE ( 
+		FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "DisplayVersion"') DO SET $OS_DISPLAY_VERSION=%%P
+	)
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_DISPLAY_VERSION: {%$OS_DISPLAY_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%	
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows Version : %$OS_DISPLAY_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Get Windows build (Based on release ID --Should work for Server.
+FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\cache\var_Windows_Build.txt) && IF EXIST "%LOG_LOCATION%\cache\var_Windows_Build.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\cache\var_Windows_Build.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P $OS_Build= < %LOG_LOCATION%\cache\var_Windows_Build.txt
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_Build: {%$OS_Build%} >> %LOG_LOCATION%\%LOG_FILE%
+VER | FIND /I "Version 10." && (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows Build: %$OS_Build% >> %LOG_LOCATION%\%LOG_FILE%
+	)
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Operating System Information. >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Computer Architecture
+::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
+FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') DO SET COMPUTER_ARCHITECTURE=%%P
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
+
+::	Processor Info
+If exist "%LOG_LOCATION%\cache\WMIC_CPU.txt" goto skipCPUI
+wmic cpu get name,caption /value > "%LOG_LOCATION%\cache\WMIC_CPU.txt"
+FOR /F "skip=1 tokens=2 delims==" %%P IN ('FIND /I "Caption" "%LOG_LOCATION%\cache\WMIC_CPU.txt"') Do echo %%P>"%LOG_LOCATION%\cache\WMIC_CPU_Caption.txt"
+FOR /F "skip=2 tokens=2 delims==" %%P IN ('FIND /I "Name" "%LOG_LOCATION%\cache\WMIC_CPU.txt"') Do echo %%P>"%LOG_LOCATION%\cache\WMIC_CPU_Name.txt"
+:skipCPUI
+SET /P $CPU_CAPTION= < "%LOG_LOCATION%\cache\WMIC_CPU_Caption.txt"
+SET /P $CPU_NAME= < "%LOG_LOCATION%\cache\WMIC_CPU_Name.txt"
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Spec's: %$CPU_NAME% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Spec's: %$CPU_CAPTION% >> %LOG_LOCATION%\%LOG_FILE%
+:: Architecture check
+	IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
+		IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
+	IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
+
+:: User Information
+whoami > "%LOG_LOCATION%\cache\var_whoami.txt"
+IF EXIST "%LOG_LOCATION%\cache\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\cache\var_whoami.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_WHOAMI= < %LOG_LOCATION%\cache\var_whoami.txt
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current User: %var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
+IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\cache\var_whoami_fqdn.txt
+IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\cache\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\cache\var_whoami_fqdn.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\cache\var_whoami_fqdn.txt
+IF EXIST %LOG_LOCATION%\cache\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: General Information.) >> %LOG_LOCATION%\%LOG_FILE%
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+:: Networking :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Networking... >> %LOG_LOCATION%\%LOG_FILE%
 ::	Find Wired Ethernet
-FOR /F "tokens=4-5 delims= " %%P IN ('netsh interface show interface ^| FIND /I "Ethernet"') DO ECHO %%P %%Q>"%LOG_LOCATION%\var\var_NETSH_Interface.txt"
-SET /P $INTERFACE_NAME= < "%LOG_LOCATION%\var\var_NETSH_Interface.txt"
+FOR /F "tokens=4-5 delims= " %%P IN ('netsh interface show interface ^| FIND /I "Ethernet"') DO ECHO %%P %%Q>"%LOG_LOCATION%\cache\var_NETSH_Interface.txt"
+SET /P $INTERFACE_NAME= < "%LOG_LOCATION%\cache\var_NETSH_Interface.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $INTERFACE_NAME: %$INTERFACE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
 ::	most default ethernet adapters will be "Ethernet"
 ::	some computers may have a "Ethernet 2"
-FIND /I "2" "%LOG_LOCATION%\var\var_NETSH_Interface.txt"
+FIND /I "2" "%LOG_LOCATION%\cache\var_NETSH_Interface.txt"
 ::	making sure there are no spaces
 IF %ERRORLEVEL% NEQ 0 SET "$INTERFACE_NAME=Ethernet"
 ::	only relevant if not default
 IF NOT "%$INTERFACE_NAME%"=="Ethernet" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $INTERFACE_NAME: %$INTERFACE_NAME% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Simple IPv4 extraction --only works for default "Ethernet" NIC
-netsh interface ipv4 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
-FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "IP Address:" "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"') DO SET $IPV4=%%P
+netsh interface ipv4 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv4.txt
+FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "IP Address:" "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv4.txt"') DO SET $IPV4=%%P
 for /f "tokens=* delims= " %%P IN ("%$IPV4%") DO SET $IPV4=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %$IPV4% >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Simple IPv6 extraction --only works for default "Ethernet" NIC
-netsh interface ipv6 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
-IF EXIST "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt" DEL /Q /F "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
-FOR /F "tokens=2 delims= " %%P IN ('FINDSTR /R /C:"Address" "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"') DO ECHO %%P >> "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
-SET /P $IPV6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6_P.txt"
+netsh interface ipv6 show addresses "%$INTERFACE_NAME%" > %LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6.txt
+IF EXIST "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6_P.txt" DEL /Q /F "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6_P.txt"
+FOR /F "tokens=2 delims= " %%P IN ('FINDSTR /R /C:"Address" "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6.txt"') DO ECHO %%P >> "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6_P.txt"
+SET /P $IPV6= < "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6_P.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %$IPV6% >> %LOG_LOCATION%\%LOG_FILE%
-
-
-:: OS NAME
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\var\var_systeminfo_OSName.txt"
-IF EXIST "%LOG_LOCATION%\var\var_systeminfo_OsName.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	File [%LOG_LOCATION%\var\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P $OSNAME= < "%LOG_LOCATION%\var\var_systeminfo_OSName.txt"
-:: Remove spaces
-for /f "tokens=* delims= " %%P IN ("%$OSNAME%") DO SET $OSNAME=%%P
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Name: %$OSNAME% >> %LOG_LOCATION%\%LOG_FILE%
-
-:: Get Windows version (Based on release ID --more relevant for Windows 10)
-FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ReleaseId') DO (ECHO %%R> %LOG_LOCATION%\var\var_Windows_Version.txt) && IF EXIST "%LOG_LOCATION%\var\var_Windows_Version.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_Windows_Version.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_WINDOWS_VERSION= < %LOG_LOCATION%\var\var_Windows_Version.txt
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WINDOWS_VERSION: {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
-VER | FIND /I "Version 10." && (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows 10 version: %var_WINDOWS_VERSION% >> %LOG_LOCATION%\%LOG_FILE%
-	)
-ver > %LOG_LOCATION%\var\var_ver.txt
-FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\var\var_ver.txt) DO SET var_VER=%%V
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
-:: Computer Architecture
-::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\var\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
-FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') DO SET COMPUTER_ARCHITECTURE=%%P
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
-IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
-	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
-:: User Information
-whoami > "%LOG_LOCATION%\var\var_whoami.txt"
-IF EXIST "%LOG_LOCATION%\var\var_whoami.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_whoami.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_WHOAMI= < %LOG_LOCATION%\var\var_whoami.txt
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Current User: %var_WHOAMI% >> %LOG_LOCATION%\%LOG_FILE%
-IF %DOMAIN_USER_STATUS% EQU 1 whoami /FQDN > %LOG_LOCATION%\var\var_whoami_fqdn.txt
-IF %DOMAIN_USER_STATUS% EQU 1 IF EXIST "%LOG_LOCATION%\var\var_whoami_fqdn.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\var\var_whoami_fqdn.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P var_WHOAMI_FQDN= < %LOG_LOCATION%\var\var_whoami_fqdn.txt
-IF EXIST %LOG_LOCATION%\var\var_whoami_fqdn.txt IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	FQDN: %var_WHOAMI_FQDN% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: General Information.) >> %LOG_LOCATION%\%LOG_FILE%
-
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Networking. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 :: Misc. Variables ::
 :: RSAT Attempts
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Attempts... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q "%LOG_LOCATION%\var\var_RSAT_attempt.txt"
-IF NOT EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt (SET RSAT_ATTEMPT=0) ELSE (
+IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q "%LOG_LOCATION%\cache\var_RSAT_attempt.txt"
+IF NOT EXIST %LOG_LOCATION%\cache\var_RSAT_attempt.txt (SET RSAT_ATTEMPT=0) ELSE (
 	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt SET RSAT_ATTEMPT=0
 	)
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_RSAT_attempt.txt SET /P RSAT_ATTEMPT= < %LOG_LOCATION%\var\var_RSAT_attempt.txt
+IF EXIST %LOG_LOCATION%\cache\var_RSAT_attempt.txt SET /P RSAT_ATTEMPT= < %LOG_LOCATION%\cache\var_RSAT_attempt.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT:RSAT Attempts. >> %LOG_LOCATION%\%LOG_FILE%
 :: SHA 256 Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA256 Check... >> %LOG_LOCATION%\%LOG_FILE%
@@ -675,9 +712,9 @@ IF EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" SET /P WPF_SHA256= < "%~dp0\%SCRIPT_NA
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: %SCRIPT_NAME%_SHA256: {%WPF_SHA256%} >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" DEL /F /Q "%LOG_LOCATION%\WPF_SHA256_check.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {WPF_SHA256_check.txt} just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::	blank out the SHA256 check file
-IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" DEL /Q /F "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
-IF NOT EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%~dp0\%POST_FLIGHT_CMD_NAME%" SHA256') DO ECHO %%P>> %LOG_LOCATION%\var\var_WPF_SHA256_check.txt
-IF EXIST "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK= < "%LOG_LOCATION%\var\var_WPF_SHA256_check.txt"
+IF EXIST "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt" DEL /Q /F "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt"
+IF NOT EXIST "%LOG_LOCATION%\WPF_SHA256_check.txt" FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%~dp0\%POST_FLIGHT_CMD_NAME%" SHA256') DO ECHO %%P>> %LOG_LOCATION%\cache\var_WPF_SHA256_check.txt
+IF EXIST "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK= < "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Check. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -696,6 +733,14 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $IPv4: {%$IPv4%} >> %LOG_LOCATION%\%LOG
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $IPv6:	{%$IPv6%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $MANUFACTURER: {%$MANUFACTURER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $MODEL: {%$MODEL%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS: {%$OS%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_BUILD: {%$OS_Build%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_DISPLAY_VERSION: {%$OS_DISPLAY_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_EDITION: {%$OS_EDITION%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_INSTALLATION_TYPE: {%$OS_INSTALLATION_TYPE%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_MAJOR: {%$OS_MAJOR%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_NAME: {%$OS_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $PID: {%$PID%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $SERIAL_NUMBER: {%$SERIAL_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $TimeZone: {%$TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
@@ -756,12 +801,12 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: START_TIME: {%START_TIME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_CLEANUP: {%VAR_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CACHE_CLEANUP: {%CACHE_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO_OSNAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI: {%var_WHOAMI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI_FQDN: {%var_WHOAMI_FQDN%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WINDOWS_VERSION: {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
+
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_SETUP: {%WIRELESS_SETUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_CONFIG_NAME: {%WIRELESS_CONFIG_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_CONFIG_SSID: {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -800,10 +845,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Checker. 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Get the console user
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Console user sub-routine...) >> %LOG_LOCATION%\%LOG_FILE%
-QUERY SESSION > %LOG_LOCATION%\var\var_CONSOLE_USER.txt
-FOR /F "tokens=2 delims= " %%U IN ('FIND /I "console" %LOG_LOCATION%\var\var_CONSOLE_USER.txt') DO SET CONSOLE_USER=%%U
+QUERY SESSION > %LOG_LOCATION%\cache\var_CONSOLE_USER.txt
+FOR /F "tokens=2 delims= " %%U IN ('FIND /I "console" %LOG_LOCATION%\cache\var_CONSOLE_USER.txt') DO SET CONSOLE_USER=%%U
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Console user ID is {%CONSOLE_USER%}! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_CONSOLE_USER.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_CONSOLE_USER.txt} just got created!) >> %LOG_LOCATION%\%LOG_FILE% 
+IF EXIST %LOG_LOCATION%\cache\var_CONSOLE_USER.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_CONSOLE_USER.txt} just got created!) >> %LOG_LOCATION%\%LOG_FILE% 
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Console user {%CONSOLE_USER%} is the same as DEFAULT_USER {%DEFAULT_USER%}, logoff will occur at the end!) >> %LOG_LOCATION%\%LOG_FILE%
 IF "%DEFAULT_USER%"=="%CONSOLE_USER%" (ECHO %ISO_DATE% %TIME% Console user [%CONSOLE_USER%] is the same as DEFAULT_USER [%DEFAULT_USER%], logoff will occur at the end!)
 IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Console user sub-routine!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -850,8 +895,8 @@ ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
 DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
-FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt
-FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
+FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt
+FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
 :: Skip checking seed drive after first time run if not found
 IF NOT DEFINED SEED_DRIVE_VOLUME ECHO No seed drive found!
 IF NOT DEFINED SEED_DRIVE_VOLUME IF NOT EXIST "%LOG_LOCATION%\FirstTimeRun.txt" GoTo jump3
@@ -861,7 +906,7 @@ IF EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Seed Drive Found: %SEED_DRIVE_VOLUME%
 IF EXIST %LOG_LOCATION%\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\var\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [2]: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -873,7 +918,7 @@ ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
-IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
+IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -898,12 +943,12 @@ IF %WIRELESS_CONNECTION_ERROR% GTR 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% 
 ::	may need a delay timer to give wireless a chance to connect
 :: Show IP's if connected
 :: Simple IPv4 extraction --only works for 1 NIC
-IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt
-IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv4= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv4.txt"
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=2 delims=:" %%P IN ('ipconfig ^| FIND /I "IPv4 Address"') DO ECHO %%P > %LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv4.txt
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv4= < "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv4.txt"
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv4 Address: %VAR_IPv4% >> %LOG_LOCATION%\%LOG_FILE%
 :: Simple IPv6 extraction --only works for 1 NIC
-IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt
-IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv6= < "%LOG_LOCATION%\var\var_%COMPUTERNAME%_IPv6.txt"
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 FOR /F "tokens=10 delims= " %%P IN ('ipconfig ^| FIND /I "IPv6 Address"') Do ECHO %%P > %LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6.txt
+IF %WIRELESS_CONNECTION_ERROR% EQU 0 SET /P VAR_IPv6= < "%LOG_LOCATION%\cache\var_%COMPUTERNAME%_IPv6.txt"
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %VAR_IPv6% >> %LOG_LOCATION%\%LOG_FILE%
 NSLOOKUP %NETDOM_DOMAIN% | (FIND /I "Can't find") && (SET NETWORK_CONNECTION_STATUS=0)
 IF NOT DEFINED NETWORK_CONNECTION_STATUS SET NETWORK_CONNECTION_STATUS=1
@@ -964,9 +1009,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 Echo Checking for Chocolatey...
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt GoTo jump8
+IF EXIST %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt GoTo jump8
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for Chocolatey presence... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt (
+IF EXIST %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Chocolatey Meta check appears to have already run!) >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED ChocolateyInstall GoTO jump8
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
@@ -1000,13 +1045,13 @@ ECHO.
 
 :: Windows 10 1809 or later
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM NETDOM installation... >> %LOG_LOCATION%\%LOG_FILE%
-IF %var_WINDOWS_VERSION% LSS 1809 GoTo skip1809
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing [NETDOM] via DISM for Windows 10 {%var_WINDOWS_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %var_WINDOWS_VERSION% GEQ 1809 (
+IF %$OS_Build% LSS 1809 GoTo skip1809
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing [NETDOM] via DISM for Windows 10 {%$OS_Build%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %$OS_Build% GEQ 1809 (
 	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
 	)
 (NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
-IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\DISM_RSAT.txt
+IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
 IF %NETDOM_PRESENCE% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% NEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	[NETDOM] failed to install via DISM! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% NEQ 1 (NETDOM HELP 2> nul) || (SET NETDOM_PRESENCE=0)
@@ -1016,24 +1061,24 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: DISM NETDOM inst
 
 :: Windows 10 1803 or older
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: NETDOM installation via package... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt) ELSE (
-	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt)
-IF EXIST "%LOG_LOCATION%\var\var_NETDOM_INSTALL.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_NETDOM_INSTALL.txt} just got created. >> %LOG_LOCATION%\%LOG_FILE% 
-IF EXIST %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt
+IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt) ELSE (
+	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt)
+IF EXIST "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_NETDOM_INSTALL.txt} just got created. >> %LOG_LOCATION%\%LOG_FILE% 
+IF EXIST %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt
 IF DEFINED NETDOM_INSTALL IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package {%NETDOM_INSTALL%} was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED NETDOM_INSTALL (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED NETDOM_INSTALL GoTo err01
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the computer architecture {%COMPUTER_ARCHITECTURE%}... >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt && (
+FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt && (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package meets the {%COMPUTER_ARCHITECTURE%} computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\var\var_NETDOM_INSTALL.txt || (
+FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt || (
 	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package doesn't match the computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
 
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the Windows Version {%var_WINDOWS_VERSION%}... >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%var_WINDOWS_VERSION%" "%LOG_LOCATION%\var\var_NETDOM_INSTALL.txt" && (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package is a match for the Windows Version {%var_WINDOWS_VERSION%}!) >> %LOG_LOCATION%\%LOG_FILE%
-	FIND /I "%var_WINDOWS_VERSION%" "%LOG_LOCATION%\var\var_NETDOM_INSTALL.txt" || (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package {%NETDOM_INSTALL%} is NOT a match for the Windows Version {%var_WINDOWS_VERSION%}!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the Windows Build {%$OS_Build%}... >> %LOG_LOCATION%\%LOG_FILE%
+FIND /I "%$OS_Build%" "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" && (
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package is a match for the Windows Version {%$OS_Build%}!) >> %LOG_LOCATION%\%LOG_FILE%
+	FIND /I "%$OS_Build%" "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" || (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package {%NETDOM_INSTALL%} is NOT a match for the Windows Version {%$OS_Build%}!) >> %LOG_LOCATION%\%LOG_FILE%
 
 REM WILL NEED ERROR CATCHING FOR THE ABOVE TWO CONDITIONS
 
@@ -1045,7 +1090,7 @@ ECHO (Computer will reboot after instalation!)
 ECHO.
 SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	RSAT_ATTEMPT just got set to {%RSAT_ATTEMPT%}! >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %RSAT_ATTEMPT% > %LOG_LOCATION%\var\var_RSAT_attempt.txt
+ECHO %RSAT_ATTEMPT% > %LOG_LOCATION%\cache\var_RSAT_attempt.txt
 :: The RSAT installer
 "%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet /norestart
 SET RSAT_INSTALL_ERRORLEVEL=%ERRORLEVEL%
@@ -1079,7 +1124,7 @@ GoTo autoSU
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Decide where to go
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_1_FILE_NAME% GoTo startS
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo startS
+IF EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%") | FIND /I "%NETDOM_USERD%" && GoTo startS
 SCHTASKS /Query /TN "%SCRIPT_NAME%" && IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo stepSTD
 SCHTASKS /Query /TN "%SCRIPT_NAME%" || GoTo stepSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Auto-Setup for Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
@@ -1103,7 +1148,7 @@ IF %ERRORLEVEL% EQU 0 (
 	 ) ELSE (
 	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Scheduled Task local for {%SCRIPT_NAME%} FAILED! >> %LOG_LOCATION%\%LOG_FILE%
 	 ) >> %LOG_LOCATION%\%LOG_FILE%
-SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Function for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 GoTo startS
 
@@ -1125,29 +1170,29 @@ ECHO.
 :trapSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 (SCHTASKS /Query /TN "%SCRIPT_NAME%" 2> nul) || IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Scheduled Task for [%SCRIPT_NAME%] doesn't already exist, and was expected! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) && GoTo skipSTD
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) || GoTo fSTD
+IF EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) && GoTo skipSTD
+IF EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (SCHTASKS /Query /V /FO LIST /TN "%SCRIPT_NAME%" 2> nul) | (FIND /I "%NETDOM_USERD%" 2> nul) || GoTo fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 
 :fSTD
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 SCHTASKS /Create /TR "%POST_FLIGHT_DIR%\%POST_FLIGHT_CMD_NAME%" /RU %NETDOM_DOMAIN%\%NETDOM_USERD% /RP %NETDOM_PASSWORDD% /TN "%SCRIPT_NAME%" /SC ONSTART /IT /DELAY 0001:00 /RL HIGHEST /F
-SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V || IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Task Scheduler failed to create task named {%SCRIPT_NAME%} with the domain user {%NETDOM_USERD%}! >> %LOG_LOCATION%\%LOG_FILE%
 :: If setting the domain account for the scheduled task fails resort back to STL
 :: This is failing and skipping the reboot
-:: FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
+:: FINSTR /C:"%NETDOM_USERD%" %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt || GoTo fSTL
 
 :: Set that the Task scheduler for domain account is rebooting
-IF NOT EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (
+IF NOT EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (
      SET TS_D_REBOOT=1
      ) && (
-	 ECHO %TS_D_REBOOT% > %LOG_LOCATION%\var\var_TS_D_REBOOT.txt
+	 ECHO %TS_D_REBOOT% > %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt
      ) && (
-     IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (
+     IF EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (
 	      IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_TS_D_REBOOT.txt} just got created!
      )) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\var\var_TS_D_REBOOT.txt (SET /P TS_D_REBOOT= < %LOG_LOCATION%\var\var_TS_D_REBOOT.txt) && SET /A "TS_D_REBOOT=TS_D_REBOOT+1"
+IF EXIST %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt (SET /P TS_D_REBOOT= < %LOG_LOCATION%\cache\var_TS_D_REBOOT.txt) && SET /A "TS_D_REBOOT=TS_D_REBOOT+1"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Task Scheduled Domain account reboot set to {%TS_D_REBOOT%}! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Function for Domain computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 :: Computer should reboot to run as a domain user
@@ -1282,10 +1327,10 @@ GoTo fmac
 :: FUNCTION	GET MAC Address
 :: Getting the Host MAC Address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION GETMAC... >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\var\var_Host_MAC.txt GETMAC > %LOG_LOCATION%\var\var_Host_MAC.txt || GoTo err31
+IF NOT EXIST %LOG_LOCATION%\cache\var_Host_MAC.txt GETMAC > %LOG_LOCATION%\cache\var_Host_MAC.txt || GoTo err31
 ::	search the getmac file & set mac based on mac database
 IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
-FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\var\var_Host_MAC.txt) DO FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% && SET HOST_MAC=%%G
+FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\cache\var_Host_MAC.txt) DO FIND "%%G" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% && SET HOST_MAC=%%G
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	HOST_MAC: %HOST_MAC% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Computer MAC: %HOST_MAC%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION GETMAC. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1302,11 +1347,11 @@ GoTo fhost
 ::	based on MAC address
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Set the hostname >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED HOST_MAC GoTo err34
-FIND "%HOST_MAC%" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% > %LOG_LOCATION%\var\MAC-2-HOST.txt
-IF NOT EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt GoTo err33
-IF EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {MAC-2-HOST.txt} just got created!) >> %LOG_LOCATION%\%LOG_FILE%
+FIND "%HOST_MAC%" %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% > %LOG_LOCATION%\cache\MAC-2-HOST.txt
+IF NOT EXIST %LOG_LOCATION%\cache\MAC-2-HOST.txt GoTo err33
+IF EXIST %LOG_LOCATION%\cache\MAC-2-HOST.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {MAC-2-HOST.txt} just got created!) >> %LOG_LOCATION%\%LOG_FILE%
 :: Strip the MAC address from the file and set the hostname
-FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\var\MAC-2-HOST.txt") DO SET HOST_STRING=%%G || GoTo err33
+FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\cache\MAC-2-HOST.txt") DO SET HOST_STRING=%%G || GoTo err33
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	HOST_STRING: %HOST_STRING% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "HOST_STRING"=="" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%HOST_STRING%} found in HOST_FILE_DATABASE {%HOST_FILE_DATABASE%}) >>	%LOG_LOCATION%\%LOG_FILE%
 IF /I %COMPUTERNAME%==%HOST_STRING% GoTo Skip3
@@ -1328,8 +1373,8 @@ SET HOST_STRING=%COMPUTERNAME%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Hostname already set to {%COMPUTERNAME%} matching {%HOST_STRING%} from host file:{%HOST_FILE_DATABASE%]} >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname already set {%COMPUTERNAME%}! >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Hostname already set [%COMPUTERNAME%]!
-IF EXIST %LOG_LOCATION%\var\var_Host_MAC.txt (TYPE %LOG_LOCATION%\var\var_Host_MAC.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
-IF EXIST %LOG_LOCATION%\var\MAC-2-HOST.txt (TYPE %LOG_LOCATION%\var\MAC-2-HOST.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
+IF EXIST %LOG_LOCATION%\cache\var_Host_MAC.txt (TYPE %LOG_LOCATION%\cache\var_Host_MAC.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
+IF EXIST %LOG_LOCATION%\cache\MAC-2-HOST.txt (TYPE %LOG_LOCATION%\cache\MAC-2-HOST.txt >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%)
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1360,7 +1405,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDOMAIN%" GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDNSDOMAIN%" GoTo skip4
 :: Check the current domain association
-FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\var\var_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
+FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Current domain association is {%DOMAIN_ASSOCIATION%} >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%NETDOM_DOMAIN%"=="%DOMAIN_ASSOCIATION%" GoTo skip4
 IF %NETDOM_PRESENCE% EQU 0 GoTo err01
@@ -1374,22 +1419,22 @@ GoTo trap42
 :trap42
 :: TRAP4.2 to check on computer object in Active Directory
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.2 AD Computer object check... >> %LOG_LOCATION%\%LOG_FILE%
-DSQUERY COMPUTER domainroot -o rdn -name %COMPUTERNAME% -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\var\var_dsquery_computer.txt
-SET /P AD_OBJECT_COMPUTER_QUERY= < %LOG_LOCATION%\var\var_dsquery_computer.txt
+DSQUERY COMPUTER domainroot -o rdn -name %COMPUTERNAME% -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\cache\var_dsquery_computer.txt
+SET /P AD_OBJECT_COMPUTER_QUERY= < %LOG_LOCATION%\cache\var_dsquery_computer.txt
 IF DEFINED AD_OBJECT_COMPUTER_QUERY IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Active Directory computer object {%COMPUTERNAME%} was found! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED AD_OBJECT_COMPUTER_QUERY IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Active Directory computer object {%COMPUTERNAME%} was NOT found! >> %LOG_LOCATION%\%LOG_FILE%
 IF DEFINED AD_OBJECT_COMPUTER_QUERY GoTo skipADQC
 :: Going to assume that computer object was not found and to create it before joining domain.
 ::	First get the dn of the OU to create computer object in
-DSQUERY OU domainroot -o dn -name "%AD_COMPUTER_OU%" -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\var\var_dsquery_ou.txt
+DSQUERY OU domainroot -o dn -name "%AD_COMPUTER_OU%" -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\cache\var_dsquery_ou.txt
 	::remove quotes from ou string
-IF EXIST %LOG_LOCATION%\var\var_dsquery_ou.txt FOR /F "tokens=* delims=" %%P IN ('type %LOG_LOCATION%\var\var_dsquery_ou.txt') DO SET AD_OBJECT_OU=%%~P
+IF EXIST %LOG_LOCATION%\cache\var_dsquery_ou.txt FOR /F "tokens=* delims=" %%P IN ('type %LOG_LOCATION%\cache\var_dsquery_ou.txt') DO SET AD_OBJECT_OU=%%~P
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_OBJECT_OU: {%AD_OBJECT_OU%} >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED AD_OBJECT_OU IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The OU {%AD_COMPUTER_OU%} was NOT found! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT DEFINED AD_OBJECT_OU GoTo fdomain
 :: Create computer object in AD
-DSADD COMPUTER "CN=%COMPUTERNAME%,%AD_OBJECT_OU%" -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\var\var_dsadd.txt
-(FIND /I "dsadd succeeded" "%LOG_LOCATION%\var\var_dsadd.txt" 2> nul) & (SET VAR_DSADD_ERROR=%ERRORLEVEL%)
+DSADD COMPUTER "CN=%COMPUTERNAME%,%AD_OBJECT_OU%" -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\cache\var_dsadd.txt
+(FIND /I "dsadd succeeded" "%LOG_LOCATION%\cache\var_dsadd.txt" 2> nul) & (SET VAR_DSADD_ERROR=%ERRORLEVEL%)
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: VAR_DSADD_ERROR: %VAR_DSADD_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
 IF %VAR_DSADD_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	AD computer object {%COMPUTERNAME%} successfully created in {%AD_OBJECT_OU%}! >> %LOG_LOCATION%\%LOG_FILE%
 IF %VAR_DSADD_ERROR% NEQ 0 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	AD computer object {%COMPUTERNAME%} FAILED to be created in {%AD_OBJECT_OU%}! >> %LOG_LOCATION%\%LOG_FILE%
@@ -1438,7 +1483,7 @@ IF %ERRORLEVEL% EQU 0 (
 	 ) ELSE (
 	 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Scheduled Task local for {%SCRIPT_NAME%} FAILED!
 	 ) >> %LOG_LOCATION%\%LOG_FILE%
-SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+SCHTASKS /Query /TN "%SCRIPT_NAME%" /FO LIST /V >> %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT Sub-Function Resetting Scheduled Task after domain join! >> %LOG_LOCATION%\%LOG_FILE%
 ::::
 :: Going to function end time since computer is rebooting
@@ -1478,9 +1523,9 @@ IF DEFINED CHOCO_PRESENCE IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEB
 IF DEFINED ChocolateyInstall (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Chocolatey variable [ChocolateyInstall] exists! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
 	IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt IF NOT DEFINED ChocolateyInstall IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey variable [ChocolateyInstall] not set, possibly due to a first time run. Environment variable requires a reboot. >> %LOG_LOCATION%\%LOG_FILE%
-IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
-IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Chocolatey") > %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 Choco info Chocolatey > %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	{%var_CHOCOLATEY%} is present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Chocolatey is NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 GoTo err50
@@ -1574,7 +1619,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.1 >> %LOG
 :: Check to make sure powershell exist
 ::	this should go to an error
 ::	if this file exists, check already happened
-IF EXIST "%LOG_LOCATION%\var\var_PS_Version.txt" GoTo trap7.2
+IF EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" GoTo trap7.2
 IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skip7
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PowerShell checks out based on global variable PSMODULEPATH >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
@@ -1582,9 +1627,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.1 >> %LOG_
 :trap7.2
 :: Check for Internet connectivity using Google Public DNS
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
-NSLOOKUP windowsupdate.microsoft.com 8.8.8.8 > %LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt
-FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt" || GoTo err
-FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Microsoft-Update.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Internet connection to Microsoft appears to be up! >> %LOG_LOCATION%\%LOG_FILE%
+NSLOOKUP windowsupdate.microsoft.com 8.8.8.8 > %LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt
+FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt" || GoTo err
+FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Internet connection to Microsoft appears to be up! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
 
 :fWUP
@@ -1645,13 +1690,13 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [su
 
 :: If there's no network connection to chocolatey.org, the commandlet will fail.
 ::	Self-Preservation
-NSLOOKUP chocolatey.org 8.8.8.8 > %LOG_LOCATION%\var\var_nslookup_Chocolatey.txt
-FIND /I "Name:" "%LOG_LOCATION%\var\var_nslookup_Chocolatey.txt" || GoTo err80
+NSLOOKUP chocolatey.org 8.8.8.8 > %LOG_LOCATION%\cache\var_nslookup_Chocolatey.txt
+FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Chocolatey.txt" || GoTo err80
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\var\var_%SCRIPT_NAME%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
+IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% installed for the first time successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Chocolatey failed to install for the first time!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% installed for the first time successfully!
@@ -1833,10 +1878,10 @@ IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (IF %LOG_LEVEL_INFO% EQU 1 
 :: Text file cleanup when everything is complete
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log DEL /F /Q %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log)
 IF NOT EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (
-     IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (TYPE %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
-	 ) && IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
-IF NOT EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {updated_POST-FLIGHT-SEED.log} deleted!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF EXIST "%LOG_LOCATION%\DISM_RSAT.txt" (TYPE "%LOG_LOCATION%\DISM_RSAT.txt" >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%) && (DEL /F /Q "%LOG_LOCATION%\DISM_RSAT.txt")
+     IF EXIST %LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log (TYPE %LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
+	 ) && IF EXIST %LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
+IF NOT EXIST %LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {updated_POST-FLIGHT-SEED.log} deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF EXIST "%LOG_LOCATION%\cache\DISM_RSAT.txt" (TYPE "%LOG_LOCATION%\cache\DISM_RSAT.txt" >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%) && (DEL /F /Q "%LOG_LOCATION%\cache\DISM_RSAT.txt")
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Process Registry Sub-Routine
@@ -1848,8 +1893,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Jump4! >> %LOG_L
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
 :: cleanup the scheduled task
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (
-     IF EXIST %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)) && DEL /F /Q %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt
-IF NOT EXIST %LOG_LOCATION%\Task_scheduler_%SCRIPT_NAME%.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {Task_scheduler_%SCRIPT_NAME%.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
+     IF EXIST %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt (TYPE %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)) && DEL /F /Q %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt
+IF NOT EXIST %LOG_LOCATION%\cache\TASK_SCHEDULER_%SCRIPT_NAME%.txt (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {Task_scheduler_%SCRIPT_NAME%.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
 IF EXIST %LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log (SCHTASKS /Query /TN "%SCRIPT_NAME%") && (SCHTASKS /Delete /TN "%SCRIPT_NAME%" /F)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Task Scheduler cleanup! >> %LOG_LOCATION%\%LOG_FILE%
@@ -1885,14 +1930,14 @@ IF %DEFAULTUSER_LOCALGROUP_DELETE_ERRORLEVEL% EQU 1 (
 :endc
 :: ending when complete (this is a jump spot for err100 --when everything is already done).
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Ending for complete >> %LOG_LOCATION%\%LOG_FILE%
-:: Remove the var directory if set for cleanup
-IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VAR LOCATION [%LOG_LOCATION%\var] has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
+:: Remove the cache directory if set for cleanup
+IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %CACHE_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" RD /S /Q "%LOG_LOCATION%\cache"
+IF NOT EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CACHE LOCATION [%LOG_LOCATION%\cache] has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
 IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
 IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log DEL /F /Q %LOG_LOCATION%\updated_POST-FLIGHT-SEED.log
+
 ::  Seed location cleanup
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%
 IF %SEED_LOCATION_CLEANUP% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Leaving SEED LOCATION contents!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1964,7 +2009,7 @@ EXIT
 :: ERROR 00 FATAL ERROR for folder cannot be created
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error00 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder [%LOG_LOCATION%] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder [%LOG_LOCATION%\var] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Folder [%LOG_LOCATION%\cache] could not be created! Aborting! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Exit error00 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo feTime
 
@@ -2047,11 +2092,11 @@ ECHO  Aborting {%SCRIPT_NAME%}!
 ECHO.
 ECHO.
 echo %USERNAME% %SCRIPT_NAME% %SCRIPT_VERSION% %DATE% %TIME% > "%PUBLIC%\Documents\WPF_FATAL_ERROR_Administrative.txt"
-::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
-::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
-::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-::IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-::IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the cache folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the cache folder as instructed!
+::IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" RD /S /Q "%LOG_LOCATION%\cache"
+::IF NOT EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\cache] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+::IF NOT EXIST "%LOG_LOCATION%\cache" ECHO Folder: [%LOG_LOCATION%\cache] got deleted!
 ::IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error05 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 500
 ::GoTo feTime
@@ -2070,11 +2115,11 @@ ECHO.
 ECHO Aborting {%SCRIPT_NAME%}!
 ECHO.
 ECHO.
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the var folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the var folder as instructed!
-IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\var" RD /S /Q "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\var] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST "%LOG_LOCATION%\var" ECHO Folder: [%LOG_LOCATION%\var] got deleted!
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Cleaning up the cache folder as instructed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_WARN% EQU 1 ECHO Cleaning up the cache folder as instructed!
+IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\cache" RD /S /Q "%LOG_LOCATION%\cache"
+IF NOT EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Folder: [%LOG_LOCATION%\cache] got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%LOG_LOCATION%\cache" ECHO Folder: [%LOG_LOCATION%\cache] got deleted!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error06 >> %LOG_LOCATION%\%LOG_FILE%
 TIMEOUT 300
 GoTo feTime
@@ -2239,7 +2284,7 @@ GoTo jump8
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error100 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	EVERYTHING IS ALREADY DONE? >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_COMPLETE_FILE% Exists! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Exiting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% ECHO %DATE% %TIME% %SCRIPT_NAME%_%SCRIPT_VERSION% ATTEMPTED BUT ABORTED! >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
 ECHO %ISO_DATE% %TIME% EVERYTHING IS ALREADY DONE! > %LOG_LOCATION%\WPF_runout.txt
 IF EXIST "%LOG_LOCATION%\WPF_runout.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	WPF_runout.txt file created! >> %LOG_LOCATION%\%LOG_FILE%
@@ -2263,8 +2308,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION lapse 
 IF %PS_STATUS% EQU 0 GoTo skipPSLT
 @PowerShell.exe -c "$span=([datetime]'%$End_Time%' - [datetime]'%Start_Time%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > %LOG_LOCATION%\var_Time_Lapse.txt
 IF EXIST %LOG_LOCATION%\var_Time_Lapse.txt SET /P TIME_LAPSE= < %LOG_LOCATION%\var_Time_Lapse.txt
-IF EXIST "%LOG_LOCATION%\var" MOVE /Y "%LOG_LOCATION%\var_Time_Lapse.txt" "%LOG_LOCATION%\var"
-IF NOT EXIST "%LOG_LOCATION%\var" IF %VAR_CLEANUP% EQU 1 DEL /F /Q "%LOG_LOCATION%\var_Time_Lapse.txt"
+IF EXIST "%LOG_LOCATION%\cache" MOVE /Y "%LOG_LOCATION%\var_Time_Lapse.txt" "%LOG_LOCATION%\cache"
+IF NOT EXIST "%LOG_LOCATION%\cache" IF %CACHE_CLEANUP% EQU 1 DEL /F /Q "%LOG_LOCATION%\var_Time_Lapse.txt"
 :skipPSLT
 :: Time Lapse 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Time Lapsed (hh:mm.ss): %TIME_LAPSE% >> %LOG_LOCATION%\%LOG_FILE%
@@ -2278,7 +2323,7 @@ IF EXIST "%LOG_LOCATION%\WPF_runout.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DA
 IF EXIST "%LOG_LOCATION%\WPF_runout.txt" GoTo skipTLT
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Skipping total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo skipTLT
-SET /P WPF_START_TIME= < "%LOG_LOCATION%\var\WPF_Start_Time.txt"
+SET /P WPF_START_TIME= < "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
 IF EXIST %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt DEL /Q /F %LOG_LOCATION%\WPF_Total_Lapsed_Time.txt
 IF %PS_STATUS% EQU 0 GoTo skipTLT
 @PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%WPF_START_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
@@ -2287,15 +2332,18 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total time lapse (hh
 :: Calculate # reboots
 FOR /F "tokens=6 delims= " %%P IN ('find /I "Time Lapsed" "%LOG_LOCATION%\%LOG_FILE%"') DO ECHO %%P >> %LOG_LOCATION%\WPF_Reboots.txt
 IF DEFINED WPF_TOTAL_TIME FOR /F "tokens=3 delims=:" %%P IN ('FIND /C ":" "%LOG_LOCATION%\WPF_Reboots.txt"') DO IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Total Reboots:%%P >> %LOG_LOCATION%\%LOG_FILE%
-:: Cleanup up some post-cleanup files since var folder no longer exists if var switch is turned on to clean up
-IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"
-IF %VAR_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Reboots.txt" DEL /F /Q "%LOG_LOCATION%\WPF_Reboots.txt"
+:: Cleanup up some post-cleanup files since cache folder no longer exists if cache switch is turned on to clean up
+IF %CACHE_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" (DEL /F /Q "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt") 
+IF EXIST "%LOG_LOCATION%\cache" MOVE /Y "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt"
+IF %CACHE_CLEANUP% EQU 1 IF EXIST "%LOG_LOCATION%\WPF_Reboots.txt" (DEL /F /Q "%LOG_LOCATION%\WPF_Reboots.txt")
+IF EXIST "%LOG_LOCATION%\cache"	MOVE /Y "%LOG_LOCATION%\WPF_Reboots.txt" "%LOG_LOCATION%\cache\WPF_Reboots.txt"
 :skipTLT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION Total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:EOF
-:: END OF FILE
+
+:Cleanup
+:: Cleanup of cache
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: end of file >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q %LOG_LOCATION%\FirstTimeRun.txt && (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {FirstTimeRun.txt} just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %DEBUG_MODE% EQU 0 IF EXIST "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt" DEL /Q /F "%LOG_LOCATION%\WPF_Total_Lapsed_Time.txt"

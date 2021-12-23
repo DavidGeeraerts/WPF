@@ -22,6 +22,32 @@
 
 ---
 
+## Version 4.10.0 (2021-12-23)
+### Added
+- Windows display version 
+- additional TRACE
+- VARIABLE DEBUG list
+- CPU Spec's
+
+### Changed
+- var folder name to cache
+- min schema to 3.7.0
+- Order of OS info
+- Order of networking info
+- variable var_WINDOWS_VERSION to $OS_BUILD
+- language aborting to exiting if EVERYTHING IS ALREADY DONE
+- location of SEED log to cache
+- location of DISM log to cache
+- location of Task Scheduler log to cache
+
+
+### Fixed
+- run id not generating under certain conditions
+
+
+---
+
+
 ## Version 4.9.0 (2021-12-22)
 ### Added
 - PID
@@ -31,8 +57,6 @@
 
 ### Removed
 - WPF_Start_Time.txt deletion if delete var selected since already in var folder.
-
----
 
 
 ## Version 4.8.0 (2021-07-27)
