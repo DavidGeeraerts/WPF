@@ -22,6 +22,23 @@
 
 ---
 
+## Version 4.11.0 (2022-01-13)
+### Added
+- KB_BL KB Black List
+
+### Changed
+- location of SystemInfo to cache
+- location of ComputerInfo to cache
+- Minimum Config Schema 3.8.0
+
+
+
+
+
+
+---
+
+
 ## Version 4.10.0 (2021-12-23)
 ### Added
 - Windows display version 
@@ -43,9 +60,6 @@
 
 ### Fixed
 - run id not generating under certain conditions
-
-
----
 
 
 ## Version 4.9.0 (2021-12-22)
