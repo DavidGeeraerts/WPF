@@ -34,8 +34,8 @@
 SETLOCAL Enableextensions
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.10.0
-SET SCRIPT_BUILD=20211223
+SET SCRIPT_VERSION=4.11.0
+SET SCRIPT_BUILD=20220113
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -59,7 +59,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.7.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.8.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -337,6 +337,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_REBOOT" "%~dp0\%CONFIG_
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"AD_NETLOGON" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "AD_NETLOGON=%%V"
 ::   AD_COMPUTER_OU
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"AD_COMPUTER_OU" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "AD_COMPUTER_OU=%%V"
+::	KB_BL
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"KB_BL" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "KB_BL=%%V"
 ::   CHOCO_META_PACKAGE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"CHOCO_META_PACKAGE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "CHOCO_META_PACKAGE=%%V"
 ::   CHOCO_PACKAGE_LIST_LOCATION
@@ -532,16 +534,16 @@ IF %LOG_LEVEL_TRACE% EQU 1 (ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: General Inform
 
 :: Generate SystemInfo file
 ::	new file on each run to capture changes.
-systeminfo > "%LOG_LOCATION%\SystemInfo.txt"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\systeminfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
-IF %PS_STATUS% EQU 1 @powershell Get-ComputerInfo> "%LOG_LOCATION%\ComputerInfo.txt"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\ComputerInfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+systeminfo > "%LOG_LOCATION%\cache\SystemInfo.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\cache\SystemInfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
+IF %PS_STATUS% EQU 1 @powershell Get-ComputerInfo> "%LOG_LOCATION%\cache\ComputerInfo.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File [%LOG_LOCATION%\cache\ComputerInfo.txt] just got created or updated! >> %LOG_LOCATION%\%LOG_FILE%
 
 :: TimeZone
 IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt" SET /P $TimeZone= < "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
 IF DEFINED $TimeZone for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
 IF DEFINED $TimeZone GoTo skipTZ
-FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
+FOR /F "tokens=2-4 delims=:&" %%P IN ('FIND /I "Time Zone:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P:%%Q-%%R > "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
 IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_systeminfo_TimeZone.txt} created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P $TimeZone= < "%LOG_LOCATION%\cache\var_systeminfo_TimeZone.txt"
 for /f "tokens=* delims= " %%P IN ("%$TimeZone%") DO SET $TimeZone=%%P
@@ -561,12 +563,12 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF PID: %$PID% >> %LOG_
 
 :: Computer Information
 :: Manufacturer
-FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Manufacturer:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P > "%LOG_LOCATION%\cache\var_systeminfo_SystemManufacturer.txt"
+FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Manufacturer:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P > "%LOG_LOCATION%\cache\var_systeminfo_SystemManufacturer.txt"
 SET /P $MANUFACTURER= < "%LOG_LOCATION%\cache\var_systeminfo_SystemManufacturer.txt"
 for /f "tokens=* delims= " %%P IN ("%$MANUFACTURER%") DO SET $MANUFACTURER=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Manufacturer: %$MANUFACTURER% >> %LOG_LOCATION%\%LOG_FILE%
 :: Model
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Model:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_SystemModel.txt"
+IF EXIST "%LOG_LOCATION%\cache\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "System Model:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_SystemModel.txt"
 SET /P $MODEL= < "%LOG_LOCATION%\cache\var_systeminfo_SystemModel.txt"
 for /f "tokens=* delims= " %%P IN ("%$MODEL%") DO SET $MODEL=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_LOCATION%\%LOG_FILE%
@@ -575,7 +577,7 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_
 FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic bios get SerialNumber /value') DO SET $SERIAL_NUMBER=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Serial Number: %$SERIAL_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 :: BIOS
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
+IF EXIST "%LOG_LOCATION%\cache\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
 SET /P $BIOS= < "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
 for /f "tokens=* delims= " %%P IN ("%$BIOS%") DO SET $BIOS=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	BIOS: %$BIOS% >> %LOG_LOCATION%\%LOG_FILE%
@@ -602,7 +604,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Operating Syste
 	if %$OS_MAJOR%=="Server" FOR /F "skip=1 tokens=5 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS_MAJOR=%%P
 	FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "EditionID"') DO SET $OS_EDITION=%%P
 	FOR /F "tokens=2 delims==" %%P IN ('wmic os GET CAPTION /VALUE') DO SET $OS_CAPTION=%%P
-IF EXIST "%LOG_LOCATION%\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
+IF EXIST "%LOG_LOCATION%\cache\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
 IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_OsName.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	File [%LOG_LOCATION%\cache\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
 SET /P $OS_NAME= < "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
 :: Remove spaces
@@ -763,6 +765,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_DRIVE_VOLUME_LABEL: {%SEED_DRIVE_V
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE_LOCATION: {%HOST_FILE_DATABASE_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: HOST_FILE_DATABASE: {%HOST_FILE_DATABASE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ISO_DATE: {%ISO_DATE%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: KB_BL: {%KB_BL%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOCAL_ADMIN_PW_FILE: {%LOCAL_ADMIN_PW_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_LOCATION: {%LOG_LOCATION%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_FILE: {%LOG_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -893,9 +896,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Chec
 Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]...
 ECHO.
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: looking for a seed drive with volume label {%SEED_DRIVE_VOLUME_LABEL%}... >> %LOG_LOCATION%\%LOG_FILE%
-ECHO LIST VOLUME > %LOG_LOCATION%\DiskPart_Commands.txt
-DISKPART /s %LOG_LOCATION%\DiskPart_Commands.txt > %LOG_LOCATION%\DiskPart_Volume_LIST.txt
-FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt
+ECHO LIST VOLUME > %LOG_LOCATION%\cache\DiskPart_Commands.txt
+DISKPART /s %LOG_LOCATION%\cache\DiskPart_Commands.txt > %LOG_LOCATION%\cache\DiskPart_Volume_LIST.txt
+FIND "%SEED_DRIVE_VOLUME_LABEL%" %LOG_LOCATION%\cache\DiskPart_Volume_LIST.txt > %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt
 FOR /F "usebackq skip=2 tokens=3" %%G IN ("%LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt") DO SET SEED_DRIVE_VOLUME=%%G:
 :: Skip checking seed drive after first time run if not found
 IF NOT DEFINED SEED_DRIVE_VOLUME ECHO No seed drive found!
@@ -904,8 +907,8 @@ IF NOT DEFINED SEED_DRIVE_VOLUME IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME
 :: Seed drive found
 IF EXIST %SEED_DRIVE_VOLUME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed Drive Found: {%SEED_DRIVE_VOLUME%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Seed Drive Found: %SEED_DRIVE_VOLUME%
-IF EXIST %LOG_LOCATION%\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\cache\DiskPart_Commands.txt del /F /Q %LOG_LOCATION%\cache\DiskPart_Commands.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\cache\DiskPart_Commands.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\cache\DiskPart_Volume_LIST.txt del /F /Q %LOG_LOCATION%\cache\DiskPart_Volume_LIST.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\DiskPart_Volume_LIST.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt just got deleted! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [2]: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1656,8 +1659,8 @@ ECHO. >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || ECHO %DATE%%TIME%	Finnished Windows Updates >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
 IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%PROCESS_7_FILE_NAME%} exists! >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || GoTo skip7
-
-@powershell Install-WindowsUpdate -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
+IF DEFINED KB_BL @powershell Install-WindowsUpdate -NotKBArticleID %KB_BL% -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
+IF NOT DEFINED KB_BL @powershell Install-WindowsUpdate -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Windows updates requires a reboot! Rebooting! >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (shutdown -r -t 20)
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (GoTo feTime)
