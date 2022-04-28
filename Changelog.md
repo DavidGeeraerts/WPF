@@ -22,21 +22,26 @@
 
 ---
 
+## Version 4.12.0 (2022-04-28)
+### Changed
+- Using cache for process files
+
+### Fixed
+- formating
+
+---
+
+
 ## Version 4.11.0 (2022-01-13)
 ### Added
-- KB_BL KB Black List
+- KB_BL KB Black List for Windows updates
 
 ### Changed
 - location of SystemInfo to cache
 - location of ComputerInfo to cache
+- location of Diskpart commands to cache
+- location of Diskpart Volume list to cache
 - Minimum Config Schema 3.8.0
-
-
-
-
-
-
----
 
 
 ## Version 4.10.0 (2021-12-23)
