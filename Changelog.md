@@ -22,14 +22,26 @@
 
 ---
 
+## Version 4.13.0 (2022-07-08)
+#### Added
+- better logging
+ 
+### Changed
+- Default HOST_FILE_DATABASE=Computing_Inventory.txt
+- Chocolatey directory structure has it's own directory
+
+### Fixed
+- RSAT install is now /Quiet
+
+---
+
+
 ## Version 4.12.0 (2022-04-28)
 ### Changed
 - Using cache for process files
 
 ### Fixed
 - formating
-
----
 
 
 ## Version 4.11.0 (2022-01-13)

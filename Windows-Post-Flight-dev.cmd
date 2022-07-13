@@ -34,8 +34,8 @@
 SETLOCAL Enableextensions
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.12.0
-SET SCRIPT_BUILD=20220428.0800
+SET SCRIPT_VERSION=4.13.0
+SET SCRIPT_BUILD=20220708 1430
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -58,7 +58,7 @@ color 9E
 REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
-SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
+SET CONFIG_FILE_NAME=%SCRIPT_NAME%-dev.config
 SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.8.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
@@ -88,7 +88,7 @@ SET SEED_DRIVE_VOLUME_LABEL=POSTFLIGHT
 ::    this is the location and file name where the commandlet expects it
 ::    commandlet will auto-update from [source] seed drive to destination
 SET "HOST_FILE_DATABASE_LOCATION=%POST_FLIGHT_DIR%"
-SET HOST_FILE_DATABASE=Host_MAC_List.txt
+SET HOST_FILE_DATABASE=Computing_Inventory.txt
 
 :: Default Host name from Unattend.xml file
 SET DEFAULT_HOSTNAME=RENAME
@@ -108,7 +108,7 @@ SET DISKPART_COMMAND_FILE=DiskPart_Hard_Drive_Config.txt
 ::  Universal as default
 SET CHOCO_META_PACKAGE=Universal
 ::  location & name
-SET CHOCO_PACKAGE_LIST_LOCATION=%POST_FLIGHT_DIR%
+SET "CHOCO_PACKAGE_LIST_LOCATION=%POST_FLIGHT_DIR%\Chocolatey"
 SET CHOCO_PACKAGE_LIST_FILE=Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt
 
 :: Ultimate Commandlet configurations
@@ -343,7 +343,7 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"KB_BL" "%~dp0\%CONFIG_FILE_NAM
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"CHOCO_META_PACKAGE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "CHOCO_META_PACKAGE=%%V"
 ::   CHOCO_PACKAGE_LIST_LOCATION
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"CHOCO_PACKAGE_LIST_LOCATION" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "CHOCO_PACKAGE_LIST_LOCATION=%%V"
-FOR /F %%R IN ('ECHO %CHOCO_PACKAGE_LIST_LOCATION%') DO SET CHOCO_PACKAGE_LIST_LOCATION=%%R
+FOR /F %%R IN ('ECHO %CHOCO_PACKAGE_LIST_LOCATION%') DO SET "CHOCO_PACKAGE_LIST_LOCATION=%%R"
 ::   CHOCO_PACKAGE_LIST_FILE
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"CHOCO_PACKAGE_LIST_FILE" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "CHOCO_PACKAGE_LIST_FILE=%%V"
 FOR /F %%R IN ('ECHO %CHOCO_PACKAGE_LIST_FILE%') DO SET CHOCO_PACKAGE_LIST_FILE=%%R
@@ -809,7 +809,6 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI: {%var_WHOAMI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI_FQDN: {%var_WHOAMI_FQDN%} >> %LOG_LOCATION%\%LOG_FILE%
-
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_SETUP: {%WIRELESS_SETUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_CONFIG_NAME: {%WIRELESS_CONFIG_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_CONFIG_SSID: {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -921,7 +920,7 @@ ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
-IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
+IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /S /E /NP /R:1 /W:2 /XF *.lnk /LOG:%LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1051,7 +1050,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM NETDOM ins
 IF %$OS_Build% LSS 1809 GoTo skip1809
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing [NETDOM] via DISM for Windows 10 {%$OS_Build%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %$OS_Build% GEQ 1809 (
-	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
+	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P /Quiet
 	)
 (NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
 IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
@@ -1549,7 +1548,8 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Chocol
 IF NOT EXIST %ChocolateyInstall%\choco.exe GoTo err50
 
 ::	variable combine
-SET /P CHOCO_PACKAGE_RUN= < %CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%
+SET /P CHOCO_PACKAGE_RUN= < "%CHOCO_PACKAGE_LIST_LOCATION%\%CHOCO_PACKAGE_LIST_FILE%"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE:CHOCO_PACKAGE_RUN: {%CHOCO_PACKAGE_RUN%} >> %LOG_LOCATION%\%LOG_FILE%
 
 :: FUNCTION RUN Chocolatey
 ECHO %DATE% %TIME% %var_CHOCOLATEY% is running... >> %LOG_LOCATION%\Running_Chocolatey.txt
@@ -1577,6 +1577,7 @@ GoTo step6
 ::	Author uses Sorcerer's Apprentice as ultimate script file
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step6 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Step 6: Working on processing the Ultimate Commandlet...
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Invoking Windows Ultimate Playbook... >> %LOG_LOCATION%\%LOG_FILE%
 
 :trap6
 :: TRAP6 is to catch if the Ultimat file has been processed
@@ -1730,7 +1731,7 @@ GoTo jump2
 ECHO Processing advanced chocolatey...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [3] Advanced Chocolatey >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CHOCOLATEY_ADVANCED is set to: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
-DIR /B %POST_FLIGHT_DIR% | FIND /I "criteria" || GoTo err51
+DIR /B %CHOCO_PACKAGE_LIST_LOCATION% | FIND /I "criteria" || GoTo err51
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CHOCOLATEY advanced META package list is set to: %CHOCO_META_PACKAGE_LIST% >> %LOG_LOCATION%\%LOG_FILE%
 SET ADVANCED_CHOCOLATEY_META_PACKAGE=
 :: Advanced Chocolatey List Counter
