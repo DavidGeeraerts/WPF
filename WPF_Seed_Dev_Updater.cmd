@@ -25,7 +25,7 @@ CD %~dp1
 
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
-SET Name=Windows_Post-Flight_Seed_Updater
+SET Name=Windows_Post-Flight_Dev_Seed_Updater
 SET Version=3.7.3
 Title %Name% Version:%Version%
 Prompt WPF$G
@@ -122,6 +122,7 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME
 :: Ultimate script
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice_Dev.cmd /R:2 /W:5
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd" del /F /Q "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd"
+IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" SC_Sorcerer's_Apprentice.cmd
 ::	WPF Config points to dev Windows-Ultimate
 ::IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd"  SC_Sorcerer's_Apprentice.cmd
 :: Make password files hidden

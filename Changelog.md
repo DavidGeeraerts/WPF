@@ -22,6 +22,14 @@
 
 ---
 
+## Version 4.13.2 (2022-10-21)
+#### Added
+- check to make sure Ultimate script ran
+- exclude SysVol info for seed
+
+---
+
+
 ## Version 4.13.0 (2022-07-08)
 #### Added
 - better logging
@@ -32,8 +40,6 @@
 
 ### Fixed
 - RSAT install is now /Quiet
-
----
 
 
 ## Version 4.12.0 (2022-04-28)

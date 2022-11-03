@@ -1,6 +1,9 @@
 # ToDo Windows Post Flight
 
 
+- Dump all the process complete logs into a report instead of the COMPLETED_log
+- COMPLETED_log should just have a timestamp
+
 - Break out Windows Ultimate Playbook from post-flight
 
 - RSAT via DISM prompting for reboot ?
