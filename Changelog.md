@@ -22,12 +22,29 @@
 
 ---
 
+## Version 4.14.0 (2023-07-27)
+#### Added
+- more choco debug
+
+#### Changed
+- config schema
+- names of choco variables
+- how to check choco just using --version
+
+
+#### Fixed
+- Process numbering comment
+- reading choco variables from config
+- incomplete choco logging
+- choco list
+
+---
+
+
 ## Version 4.13.2 (2022-10-21)
 #### Added
 - check to make sure Ultimate script ran
 - exclude SysVol info for seed
-
----
 
 
 ## Version 4.13.0 (2022-07-08)

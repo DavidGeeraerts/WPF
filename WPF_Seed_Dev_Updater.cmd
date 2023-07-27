@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Dev_Seed_Updater
-SET Version=3.7.3
+SET Version=3.7.4
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -103,9 +103,10 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight-dev.config /R:2 /W:5
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight-debugger.config /R:2 /W:5
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.cmd" DEL /Q "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.cmd"
-IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config" DEL /Q "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config" 
+IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config" DEL /Q "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config"
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.cmd" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.cmd" Windows-Post-Flight.cmd
 ::IF EXIST "%FLASH_DRIVE_VOLUME%\Windows_Post-Flight-dev.config" rename "%FLASH_DRIVE_VOLUME%\Windows_Post-Flight-dev.config" Windows_Post-Flight.config
+IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.config" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.config" Windows-Post-Flight.config
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" Windows-Post-Flight.config
 :: Windows Unattend.xml file
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" unattend.xml /R:2 /W:5

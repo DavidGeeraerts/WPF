@@ -1,6 +1,6 @@
 # ToDo Windows Post Flight
 
-
+- Check for INCOMPLETE file and write to log
 - Dump all the process complete logs into a report instead of the COMPLETED_log
 - COMPLETED_log should just have a timestamp
 
