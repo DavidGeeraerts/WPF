@@ -22,6 +22,17 @@
 
 ---
 
+## Version 4.15.0 (2024-01-22)
+#### Changed
+- robocopy parameters for xd xf on seed drive
+- reset attributes for post-fligh directory after seeding 
+
+#### Fixed
+- choco first time run
+
+---
+
+
 ## Version 4.14.0 (2023-07-27)
 #### Added
 - more choco debug
@@ -37,8 +48,6 @@
 - reading choco variables from config
 - incomplete choco logging
 - choco list
-
----
 
 
 ## Version 4.13.2 (2022-10-21)

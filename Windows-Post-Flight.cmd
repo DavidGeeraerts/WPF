@@ -34,8 +34,8 @@
 SETLOCAL Enableextensions
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.14.0
-SET SCRIPT_BUILD=20230727 0930
+SET SCRIPT_VERSION=4.15.0
+SET SCRIPT_BUILD=20240122 0900
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
@@ -920,7 +920,7 @@ ECHO.
 IF EXIST %SEED_DRIVE_VOLUME% ECHO Updating seed location with seed drive...
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: updating seed location with seed drive {%SEED_DRIVE_VOLUME%}... >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo jump3
-IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /S /E /NP /R:1 /W:2 /XF *.lnk /XD "System Volume Information" /LOG:%LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
+IF EXIST %SEED_DRIVE_VOLUME% ROBOCOPY %SEED_DRIVE_VOLUME%\ %POST_FLIGHT_DIR%\ *.* /S /E /NP /R:1 /W:2 /XF *.lnk *.sys /XD tmp temp Recycler $RECYCLE.BIN "System Volume Information" /LOG:%LOG_LOCATION%\cache\updated_POST-FLIGHT-SEED.log
 SET ROBO_SEED_CODE=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Robocopy exit code for seed location: EXIT CODE: {%ROBO_SEED_CODE%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive {%SEED_DRIVE_VOLUME%}!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -928,6 +928,9 @@ IF %ROBO_SEED_CODE% EQU 3 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INF
 IF %ROBO_SEED_CODE% LEQ 3 ECHO Seed location [%POST_FLIGHT_DIR%] just got updated from seed drive [%SEED_DRIVE_VOLUME%]!
 IF %ROBO_SEED_CODE% GTR 7 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Seed location [%POST_FLIGHT_DIR%] failed to update!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %ROBO_SEED_CODE% GTR 7 ECHO Seed location [%POST_FLIGHT_DIR%] failed to update!
+:: With version 4.2.2 the top level folder became a system folder and is hidden
+:: This undoes that
+attrib -R -S -H "%POST_FLIGHT_DIR%" /D 2> nul
 :jump3
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [3]: update seed location if seed drive found. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -1704,9 +1707,10 @@ NSLOOKUP chocolatey.org 8.8.8.8 > %LOG_LOCATION%\cache\var_nslookup_Chocolatey.t
 FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Chocolatey.txt" || GoTo err80
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PATH just got set to: %PATH% >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET CHOCO_PRESENCE=1
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe (Choco | FIND "Chocolatey") > %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
-IF EXIST %ALLUSERSPROFILE%\chocolatey\bin\chocolatey.exe SET /P var_CHOCOLATEY= < %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
+IF EXIST "%ALLUSERSPROFILE%\chocolatey\bin\choco.exe" SET CHOCO_PRESENCE=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Variable:CHOCO_PRESENCE {%CHOCO_PRESENCE%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %CHOCO_PRESENCE% EQU 1 (Choco | FIND "Choco") > %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
+IF %CHOCO_PRESENCE% EQU 1 SET /P var_CHOCOLATEY= < %LOG_LOCATION%\cache\var_%SCRIPT_NAME%_Chocolatey.txt
 IF %CHOCO_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_CHOCOLATEY% installed for the first time successfully!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Chocolatey failed to install for the first time!) >> %LOG_LOCATION%\%LOG_FILE%
 IF %CHOCO_PRESENCE% EQU 1 ECHO %var_CHOCOLATEY% installed for the first time successfully!
@@ -2379,10 +2383,6 @@ IF EXIST "%LOG_LOCATION%\INCOMPLETE_%SCRIPT_NAME%.log" COPY /Y "%LOG_LOCATION%\%
 IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log" ECHO %ISO_DATE% %TIME%	%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_RUN_ID%.log successfully shipped to %LOG_SHIPPING_LOCATION% >> %LOG_LOCATION%\%SCRIPT_NAME%_Log_Shipping.log
 :skipLS
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-:: With version 4.2.2 the top level folder became a system folder and is hidden
-:: This undoes that
-attrib -R -S -H "%POST_FLIGHT_DIR%" /D 2> nul
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Console logoff
