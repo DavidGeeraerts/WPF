@@ -32,15 +32,17 @@
 :::: Initialize the shell :::::::::::::::::::::::::::::::::::::::::::::::::::::
 @Echo Off
 SETLOCAL Enableextensions
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.15.0
-SET SCRIPT_BUILD=20240122 0900
-Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 mode con:cols=72
 mode con:lines=45
 Prompt WPF$G
 color 9E
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
+SET SCRIPT_NAME=Windows-Post-Flight
+SET SCRIPT_VERSION=4.16.0
+SET SCRIPT_BUILD=20241014 1300
+Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 
@@ -87,7 +89,7 @@ SET SEED_DRIVE_VOLUME_LABEL=POSTFLIGHT
 ::    %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE%
 ::    this is the location and file name where the commandlet expects it
 ::    commandlet will auto-update from [source] seed drive to destination
-SET "HOST_FILE_DATABASE_LOCATION=%POST_FLIGHT_DIR%"
+SET "HOST_FILE_DATABASE_LOCATION=%POST_FLIGHT_DIR%\Configurations"
 SET HOST_FILE_DATABASE=Computing_Inventory.txt
 
 :: Default Host name from Unattend.xml file
@@ -574,7 +576,11 @@ for /f "tokens=* delims= " %%P IN ("%$MODEL%") DO SET $MODEL=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Model: %$MODEL% >> %LOG_LOCATION%\%LOG_FILE%
 :: Serial Number
 ::	If Dell, this is the Service Tag
-FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic bios get SerialNumber /value') DO SET $SERIAL_NUMBER=%%P
+@powershell Get-WmiObject -class Win32_BIOS> "%LOG_LOCATION%\cache\Win32_BIOS.txt"
+FINDSTR /C:"SerialNumber" "%LOG_LOCATION%\cache\Win32_BIOS.txt"> "%LOG_LOCATION%\cache\Win32_BIOS_SerialNumber.txt"
+FOR /F "tokens=2 delims=: " %%P IN (%LOG_LOCATION%\cache\Win32_BIOS_SerialNumber.txt) DO SET $SERIAL_NUMBER=%%P
+REM WMIC depracated with Windows 11 24H2
+::FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic bios get SerialNumber /value') DO SET $SERIAL_NUMBER=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Serial Number: %$SERIAL_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 :: BIOS
 IF EXIST "%LOG_LOCATION%\cache\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "BIOS Version:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
@@ -582,11 +588,13 @@ SET /P $BIOS= < "%LOG_LOCATION%\cache\var_systeminfo_BIOS.txt"
 for /f "tokens=* delims= " %%P IN ("%$BIOS%") DO SET $BIOS=%%P
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	BIOS: %$BIOS% >> %LOG_LOCATION%\%LOG_FILE%
 :: Acquire UUID
-IF NOT EXIST "%LOG_LOCATION%\cache\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\cache\var_UUID.txt
-SET /P $UUID= < "%LOG_LOCATION%\cache\var_UUID.txt"
+@powershell -command "(get-wmiobject Win32_ComputerSystemProduct | Select-Object -ExpandProperty UUID)"> "%LOG_LOCATION%\cache\Win32_ComputerSystemProduct_UUID.txt"
+REM WMIC depracated with Windows 11 24H2
+::IF NOT EXIST "%LOG_LOCATION%\cache\var_UUID.txt" FOR /F "tokens=2 delims==" %%S IN ('wmic csproduct get UUID /VALUE') DO ECHO %%S> %LOG_LOCATION%\cache\var_UUID.txt
+SET /P $UUID= < "%LOG_LOCATION%\cache\Win32_ComputerSystemProduct_UUID.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	System UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
 :: Get CloneZilla image name from file
-IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	CloneZilla image file not found! >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	CloneZilla image file not found! >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CloneZilla image file expected location [%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt] >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" SET /P $CLONEZILLA_IMAGE= < "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt"
 IF EXIST "%PROGRAMDATA%\CloneZilla\CloneZilla_image.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CloneZilla Image: %$CLONEZILLA_IMAGE% >> %LOG_LOCATION%\%LOG_FILE%
@@ -598,18 +606,14 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname: %COMPUTERNAME%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Operating System Information... >> %LOG_LOCATION%\%LOG_FILE%
 	:: Parse Windows OS to elements
 	::	should return "Windows"
-	FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS=%%P
-	::	Should return major release, e.g. "10" "11"
-	FOR /F "skip=1 tokens=4 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS_MAJOR=%%P
-	if %$OS_MAJOR%=="Server" FOR /F "skip=1 tokens=5 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "ProductName"') DO SET $OS_MAJOR=%%P
-	FOR /F "skip=1 tokens=3 delims= " %%P IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion" /V "EditionID"') DO SET $OS_EDITION=%%P
-	FOR /F "tokens=2 delims==" %%P IN ('wmic os GET CAPTION /VALUE') DO SET $OS_CAPTION=%%P
-IF EXIST "%LOG_LOCATION%\cache\SystemInfo.txt" FOR /F "tokens=2 delims=:" %%P IN ('FIND /I "OS Name:" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO ECHO %%P> "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
-IF EXIST "%LOG_LOCATION%\cache\var_systeminfo_OsName.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	File [%LOG_LOCATION%\cache\var_systeminfo_OsName.txt] just got created! >> %LOG_LOCATION%\%LOG_FILE%
-SET /P $OS_NAME= < "%LOG_LOCATION%\cache\var_systeminfo_OSName.txt"
-:: Remove spaces
-for /f "tokens=* delims= " %%P IN ("%$OS_NAME%") DO SET $OS_NAME=%%P
+@powershell -command "(Get-CimInstance -ClassName Win32_OperatingSystem | select-object -property Caption)"> "%LOG_LOCATION%\cache\Win32_OperatingSystem_Caption.txt"
+FOR /F "skip=3 tokens=1 delims=" %%P IN (%LOG_LOCATION%\cache\Win32_OperatingSystem_Caption.txt) DO SET "$OS=%%P"
+FOR /F "tokens=3 delims= " %%P IN ("%$OS%") DO SET $OS_MAJOR=%%P	
+FOR /F "tokens=4 delims= " %%P IN ("%$OS%") DO SET $OS_EDITION=%%P
+SET $OS_CAPTION=%$OS%
+SET $OS_NAME=%$OS%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Name: %$OS_NAME% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Windows ver output
 ver > %LOG_LOCATION%\cache\var_ver.txt
 FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\cache\var_ver.txt) DO SET var_VER=%%V
@@ -635,24 +639,27 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Operating System
 
 :: Computer Architecture
 ::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
-FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') DO SET COMPUTER_ARCHITECTURE=%%P
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
+::	FOR /F "skip=2 tokens=2 delims==" %%P IN ('wmic os get OSArchitecture /value') DO SET COMPUTER_ARCHITECTURE=%%P
+FOR /F "tokens=3 delims=- " %%P IN ('FINDSTR /C:"System Type" "%LOG_LOCATION%\cache\SystemInfo.txt"') DO SET $COMPUTER_ARCHITECTURE=%%P
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	COMPUTER_ARCHITECTURE just got set to {%$COMPUTER_ARCHITECTURE%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	COMPUTER_ARCHITECTURE: %$COMPUTER_ARCHITECTURE% >> %LOG_LOCATION%\%LOG_FILE%
 
 ::	Processor Info
-If exist "%LOG_LOCATION%\cache\WMIC_CPU.txt" goto skipCPUI
-wmic cpu get name,caption /value > "%LOG_LOCATION%\cache\WMIC_CPU.txt"
-FOR /F "skip=1 tokens=2 delims==" %%P IN ('FIND /I "Caption" "%LOG_LOCATION%\cache\WMIC_CPU.txt"') Do echo %%P>"%LOG_LOCATION%\cache\WMIC_CPU_Caption.txt"
-FOR /F "skip=2 tokens=2 delims==" %%P IN ('FIND /I "Name" "%LOG_LOCATION%\cache\WMIC_CPU.txt"') Do echo %%P>"%LOG_LOCATION%\cache\WMIC_CPU_Name.txt"
+If exist "%LOG_LOCATION%\cache\Win32_Processor.txt" goto skipCPUI
+@powershell -command "(Get-CimInstance -ClassName Win32_Processor | Select-Object -Property *)" > "%LOG_LOCATION%\cache\Win32_Processor.txt"
 :skipCPUI
-SET /P $CPU_CAPTION= < "%LOG_LOCATION%\cache\WMIC_CPU_Caption.txt"
-SET /P $CPU_NAME= < "%LOG_LOCATION%\cache\WMIC_CPU_Name.txt"
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Spec's: %$CPU_NAME% >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Spec's: %$CPU_CAPTION% >> %LOG_LOCATION%\%LOG_FILE%
+@powershell -command "(Get-CimInstance -ClassName Win32_Processor | Select-Object -Property Caption)" > "%LOG_LOCATION%\cache\Win32_Processor_Caption.txt"
+FOR /F "skip=3 tokens=1 delims=" %%P IN (%LOG_LOCATION%\cache\Win32_Processor_Caption.txt) DO SET $CPU_CAPTION=%%P
+
+@powershell -command "(Get-CimInstance -ClassName Win32_Processor | Select-Object -Property Name)" > "%LOG_LOCATION%\cache\Win32_Processor_Name.txt"
+FOR /F "skip=3 tokens=1 delims=" %%P IN (%LOG_LOCATION%\cache\Win32_Processor_Name.txt) DO SET $CPU_Name=%%P
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Name: %$CPU_NAME% >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CPU Caption: %$CPU_CAPTION% >> %LOG_LOCATION%\%LOG_FILE%
+
 :: Architecture check
-	IF "%COMPUTER_ARCHITECTURE%"=="64-bit" (
+	IF "%$COMPUTER_ARCHITECTURE%"=="x64" (
 		IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Computer meets the 64-bit computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-	IF NOT "%COMPUTER_ARCHITECTURE%"=="64-bit" GoTo err04
+	IF NOT "%$COMPUTER_ARCHITECTURE%"=="x64" GoTo err04
 
 :: User Information
 whoami > "%LOG_LOCATION%\cache\var_whoami.txt"
@@ -940,7 +947,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Chec
 IF %WIRELESS_SETUP% EQU 0 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Not configured for wireless network! >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 GoTo jump4W
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: Wireless configuration. >> %LOG_LOCATION%\%LOG_FILE%
-IF %WIRELESS_SETUP% EQU 1 (netsh wlan add profile filename=%POST_FLIGHT_DIR%\%WIRELESS_PROFILE_FILENAME% interface=%WIRELESS_CONFIG_INTERFACE% user=all)
+IF %WIRELESS_SETUP% EQU 1 (netsh wlan add profile filename=%POST_FLIGHT_DIR%\Configurations\%WIRELESS_PROFILE_FILENAME% interface=%WIRELESS_CONFIG_INTERFACE% user=all)
 SET WIRELESS_CONNECTION_ERROR=%ERRORLEVEL%
 IF %WIRELESS_SETUP% EQU 1 (netsh wlan connect name=%WIRELESS_CONFIG_NAME% ssid=%WIRELESS_CONFIG_SSID% interface=%WIRELESS_CONFIG_INTERFACE%)
 IF %WIRELESS_CONNECTION_ERROR% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Connected to a wireless network {%WIRELESS_CONFIG_SSID%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -984,17 +991,19 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Checking for password files...
 ECHO.
-IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] found!
-IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% SET /P ADMIN_PASSWORD= < %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
-IF NOT EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] not found!
-IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% ECHO Domain Join User Password file [%NETDOM_USERD_PW_FILE%] found!
+IF EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] found!
+IF EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE% SET /P ADMIN_PASSWORD= < %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE%
+IF DEFINED ADMIN_PASSWORD IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Local Administrator Password just got set. >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Local Administrator Password file {%LOCAL_ADMIN_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE% ECHO Local Administrator Password file [%LOCAL_ADMIN_PW_FILE%] not found!
+IF EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% ECHO Domain Join User Password file [%NETDOM_USERD_PW_FILE%] found!
 IF "%NETDOM_PASSWORDD%"=="*" (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	User requested to be prompted with domain join password! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
-	IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% SET /P NETDOM_PASSWORDD= < %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%)
-IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% (IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE% ECHO Domain join user password file [%NETDOM_USERD_PW_FILE%] not found!
+	IF EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% SET /P NETDOM_PASSWORDD= < %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE%)
+IF DEFINED NETDOM_PASSWORDD IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	NETDOM Password just got set. >> %LOG_LOCATION%\%LOG_FILE%	
+IF NOT EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE%(IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Domain Join User Password file {%NETDOM_USERD_PW_FILE%} not found!) >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% ECHO Domain join user password file [%NETDOM_USERD_PW_FILE%] not found!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1279,7 +1288,7 @@ IF EXIST %LOG_LOCATION%\FirstTimeRun.txt GoTo step3
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION Diskpart... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO DISKPART is running...
 ECHO %DATE% %TIME% DISKPART is running... >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
-DISKPART /s %POST_FLIGHT_DIR%\%DISKPART_COMMAND_FILE% >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
+DISKPART /s %POST_FLIGHT_DIR%\Configurations\Diskpart\%DISKPART_COMMAND_FILE% >> %LOG_LOCATION%\%PROCESS_2_FILE_NAME%
 SET DISKPART_ERROR=%ERRORLEVEL%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: DISKPART_ERROR: {%DISKPART_ERROR%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %DISKPART_ERROR% GTR 0 GoTo err20
@@ -1400,7 +1409,19 @@ IF /I "%NETDOM_DOMAIN%"=="NOT_SET" GoTo step5
 IF NOT DEFINED NETDOM_DOMAIN GoTo step5
 IF /I "%HOSTNAME%"=="%DEFAULT_HOSTNAME%" (IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	Default hostname is the same as current hostname! Abort domain join!) >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%HOSTNAME%"=="%DEFAULT_HOSTNAME%" GoTo step5
-IF /I NOT "%NETDOM_DOMAIN%"=="" GoTo trap41
+IF /I NOT "%NETDOM_DOMAIN%"=="" GoTo trap40
+
+:trap40
+::	Trap 4.0 Check on NETDOM password, otherwise Abort
+::	Authentication required!
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.0... >> %LOG_LOCATION%\%LOG_FILE%
+SET ERROR_NETDOM_P=0
+IF NOT DEFINED NETDOM_PASSWORDD SET ERROR_NETDOM_P=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	ERROR_NETDOM_P {%ERROR_NETDOM_P%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %ERROR_NETDOM_P% EQU 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	No NETDOM password is configuration! >> %LOG_LOCATION%\%LOG_FILE%
+IF %ERROR_NETDOM_P% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	No NETDOM password is configuration, aborting domain join! >> %LOG_LOCATION%\%LOG_FILE%
+IF %ERROR_NETDOM_P% EQU 1 GoTo skip41
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap4.0. >> %LOG_LOCATION%\%LOG_FILE%
 
 :trap41
 :: TRAP4.1 to catch if the computer has already been joined to a domain
@@ -1499,6 +1520,7 @@ GoTo feTime
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip4 >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% %COMPUTERNAME% has already been joined to the domain {%NETDOM_DOMAIN%}! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%COMPUTERNAME% has already been joined to the domain {%NETDOM_DOMAIN%}! >> %LOG_LOCATION%\%LOG_FILE%
+:skip41
 GoTo step5
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -1585,9 +1607,9 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Invoking Windows Ultimat
 :trap6
 :: TRAP6 is to catch if the Ultimat file has been processed
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6 >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err60
 IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" GoTo fulti
 IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% GoTo skip6
-IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err60
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6 >> %LOG_LOCATION%\%LOG_FILE%
 
 :trap61
@@ -1825,6 +1847,8 @@ GoTo fchoco
 ECHO Processing Windows Registry...
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine [4] Windows Registry >> %LOG_LOCATION%\%LOG_FILE%
 FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon') DO SET REG_AUTOADMINLOGON=%%R
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	REG_AUTOADMINLOGON {%REG_AUTOADMINLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED REG_AUTOADMINLOGON (REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /f /v AutoAdminLogon /d 0)
 IF NOT %REG_AUTOADMINLOGON% EQU 0 (REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /f /v AutoAdminLogon /d 0)
 FOR /F "tokens=3 delims= " %%R IN ('REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoAdminLogon') DO SET REG_AUTOADMINLOGON_CHK=%%R
 IF %ERRORLEVEL% EQU 0 (IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Registry Key [AutoAdminLogon] set to {%REG_AUTOADMINLOGON_CHK%}!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1953,8 +1977,8 @@ IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %CACHE_CLEANUP% EQU 1 IF EXIS
 IF NOT EXIST "%LOG_LOCATION%\cache" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	CACHE LOCATION [%LOG_LOCATION%\cache] has been deleted! >> %LOG_LOCATION%\%LOG_FILE%
 ::  cleaning up the post flight directory
 IF %SEED_LOCATION_CLEANUP% EQU 1 IF EXIST %POST_FLIGHT_DIR% DEL /F /Q /A:H %POST_FLIGHT_DIR%\*.*
-IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%LOCAL_ADMIN_PW_FILE%
-IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
+IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE%  DEL /F /Q /A:H %POST_FLIGHT_DIR%\Configurations\%LOCAL_ADMIN_PW_FILE%
+IF %DEBUG_MODE% EQU 0 IF EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% DEL /F /Q /A:H %POST_FLIGHT_DIR%\%NETDOM_USERD_PW_FILE%
 
 ::  Seed location cleanup
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SEED cleanup >> %LOG_LOCATION%\%LOG_FILE%

@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Dev_Seed_Updater
-SET Version=3.7.4
+SET Version=3.8.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -40,7 +40,7 @@ mode con:lines=50
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Master PC
-SET MASTER_PC=SC-Sphere-2
+SET MASTER_PC=SC-Cube
 
 :: Default Flash Drive Volume
 SET FLASH_DRIVE_VOLUME=F:
@@ -91,11 +91,9 @@ IF %FLASH_DRIVE_VOLUME% EQU 0 GoTo error00 ELSE (ECHO Flash Drive: %FLASH_DRIVE_
 CD /D %FLASH_DRIVE_VOLUME%\
 
 ::	Reset Attribute
-attrib -H Local_Administrator_Password.txt
-attrib -H Domain_Join_Password.txt
+IF EXIST .\Configurations\Local_Administrator_Password.txt ATTRIB -H .\Configurations\Local_Administrator_Password.txt
+IF EXIST .\Configurations\Domain_Join_Password.txt ATTRIB -H .\Configurations\Domain_Join_Password.txt
 attrib -A /S /D
-attrib +H Local_Administrator_Password.txt
-attrib +H Domain_Join_Password.txt
 
 :run
 :: Main WPF commandlet and config file
@@ -105,30 +103,40 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.cmd" DEL /Q "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.cmd"
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config" DEL /Q "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight.config"
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.cmd" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.cmd" Windows-Post-Flight.cmd
+
 ::IF EXIST "%FLASH_DRIVE_VOLUME%\Windows_Post-Flight-dev.config" rename "%FLASH_DRIVE_VOLUME%\Windows_Post-Flight-dev.config" Windows_Post-Flight.config
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.config" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-dev.config" Windows-Post-Flight.config
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" rename "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight-debugger.config" Windows-Post-Flight.config
+
 :: Windows Unattend.xml file
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" unattend.xml /R:2 /W:5
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Pre-Seeded_unattend.xml /R:2 /W:5
-:: Text files
+
+:: Text files Root
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.txt /R:2 /W:5
-:: RSAT installer
-:: Deprecating
-:: IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" *.msu /NP /R:2 /W:5
-:: All of the Chocolatey support files
-IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLUME%\Chocolatey" *.* /MIR /R:2 /W:5
+
 :: Shortcut link
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%" "%FLASH_DRIVE_VOLUME%" Windows-Post-Flight.lnk /R:2 /W:5
+
+::	Host File Database and txt files
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%\Configurations" "%FLASH_DRIVE_VOLUME%\Configurations" * /R:2 /W:5
+:: Make password files hidden
+IF EXIST %FLASH_DRIVE_VOLUME%\Configurations\Local_Administrator_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Configurations\Local_Administrator_Password.txt
+IF EXIST %FLASH_DRIVE_VOLUME%\Configurations\Domain_Join_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Configurations\Domain_Join_Password.txt
+
+:: diskpart
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%\Configurations\Diskpart" "%FLASH_DRIVE_VOLUME%\Configurations\Diskpart" /MIR /R:2 /W:5
+
+:: All of the Chocolatey support files
+IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLUME%\Chocolatey" *.* /MIR /R:2 /W:5
+
 :: Ultimate script
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice_Dev.cmd /R:2 /W:5
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd" del /F /Q "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd"
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" SC_Sorcerer's_Apprentice.cmd
 ::	WPF Config points to dev Windows-Ultimate
 ::IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd"  SC_Sorcerer's_Apprentice.cmd
-:: Make password files hidden
-IF EXIST %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Local_Administrator_Password.txt
-IF EXIST %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt ATTRIB +H %FLASH_DRIVE_VOLUME%\Domain_Join_Password.txt
+
 :: UPDATE THE SHA256 FILE
 IF EXIST "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight_SHA256.txt" DEL /Q /F "%FLASH_DRIVE_VOLUME%\Windows-Post-Flight_SHA256.txt"
 IF EXIST "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt" DEL /Q /F "%FLASH_DRIVE_VOLUME%\var_get_WPF_SHA256.txt"

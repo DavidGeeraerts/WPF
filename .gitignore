@@ -1,26 +1,18 @@
 
-Windows Post-Flight/Public
-
-Windows Post-Flight/~archive
-
-Public
-
-wget\.exe
-
-null
-
-WGET_SHA256_Code\.cmd
-
-Windows_Post-Flight_beta\.cmd
-
-Windows_Post-Flight_beta\.config
-
-*.old
-
-Windows_Post-Flight-beta\.cmd
-
-Windows_Post-Flight-beta\.config
-
-var_get_WPF_SHA256.txt
 
 ~archive/
+Windows Post-Flight/~archive
+Tools
+
+
+
+*.old
+Scientific_Computing_Inventory.txt
+Domain_Join_Password.txt
+Local_Administrator_Password.txt
+Wi-Fi-TESCWireless.xml
+
+WPF_Seed_Dev_Updater.cmd
+WPF_Seed_Updater.cmd
+
+TESC-Windows-Post-Flight-dev.config

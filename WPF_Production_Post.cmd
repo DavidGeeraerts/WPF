@@ -22,7 +22,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Production_Post
-SET Version=1.0.1
+SET Version=1.1.0
 Title %Name% Version:%Version%
 Prompt WPFPU$G
 color 0B
@@ -60,14 +60,9 @@ echo.
 
 CD /D %MASTER_SOURCE_WPF%
 
-:: COPY THE OLD FILES to ARCHIVE
-COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd.old" "%MASTER_SOURCE_WPF%\~archive"
-COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config.old" "%MASTER_SOURCE_WPF%\~archive"
-ECHO old copied to archive
-echo.
 :: DELETE THE OLD FILES
-DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd.old"
-DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config.old"
+DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd.old" 2> nul
+DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config.old" 2> nul
 echo old deleted
 echo.
 :: RENAME THE WORKING FILES TO OLD
@@ -90,5 +85,5 @@ echo.
 
 :EOF
 ENDLOCAL
-TIMEOUT /T 300
+TIMEOUT /T 60
 EXIT

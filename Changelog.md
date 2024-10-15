@@ -22,6 +22,28 @@
 
 ---
 
+## Version 4.16.0 (2024-10-15)
+#### Added
+- Configurations folder
+- Trap for Domain join password; now required unless * specified
+
+#### Changed
+- location of diskpart now in Configurations\Diskpart
+- WMIC calls to powershell calls
+- 64-bit to x64 for architecture
+- folder structure
+- WPF_Production_Post
+
+#### Deprecated
+- WMIC depracated as of Windows 11 24H2
+
+#### Removed
+- Difference with Public repo
+- Archive folder
+
+---
+
+
 ## Version 4.15.0 (2024-01-22)
 #### Changed
 - robocopy parameters for xd xf on seed drive
@@ -29,9 +51,6 @@
 
 #### Fixed
 - choco first time run
-
----
-
 
 ## Version 4.14.0 (2023-07-27)
 #### Added
