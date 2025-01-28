@@ -1,0 +1,4 @@
+List Disk
+List volume
+select volume C
+detail volume

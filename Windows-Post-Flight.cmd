@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.16.0
-SET SCRIPT_BUILD=20241014 1300
+SET SCRIPT_VERSION=4.17.0
+SET SCRIPT_BUILD=20250124 1100
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -522,7 +522,11 @@ ECHO Checking user domain status...
 IF DEFINED DOMAIN_USER_STATUS GoTo skipD1
 (WHOAMI /FQDN 2> nul) || SET DOMAIN_USER_STATUS=0
 :skipD1
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+:: Reboot flag	:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+SET $REBOOT=0
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :start
@@ -616,8 +620,8 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Name: %$OS_NAME% >> %
 
 :: Windows ver output
 ver > %LOG_LOCATION%\cache\var_ver.txt
-FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\cache\var_ver.txt) DO SET var_VER=%%V
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%var_VER% >> %LOG_LOCATION%\%LOG_FILE%
+FOR /F "skip=1 tokens=1 delims=" %%V IN (%LOG_LOCATION%\cache\var_ver.txt) DO SET $var_VER=%%V
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	%$var_VER% >> %LOG_LOCATION%\%LOG_FILE%
 
 ::	Use ReleaseID if server
 ::	{Client, Server}
@@ -636,6 +640,13 @@ VER | FIND /I "Version 10." && (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows Build: %$OS_Build% >> %LOG_LOCATION%\%LOG_FILE%
 	)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Operating System Information. >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Product key assocaited with Windows OS
+@powershell (Get-WmiObject -Query "SELECT OA3xOriginalProductKey FROM SoftwareLicensingService").OA3xOriginalProductKey > "%LOG_LOCATION%\cache\Product_Key.txt"
+SET /P $PRODUCT_KEY= < "%LOG_LOCATION%\cache\Product_Key.txt"
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	$PRODUCT_KEY: {%$PRODUCT_KEY%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Product Key: %$PRODUCT_KEY% >> %LOG_LOCATION%\%LOG_FILE%
+
 
 :: Computer Architecture
 ::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
@@ -750,6 +761,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_INSTALLATION_TYPE: {%$OS_INSTALLATI
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_MAJOR: {%$OS_MAJOR%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $OS_NAME: {%$OS_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $PID: {%$PID%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $REBOOT: {%$REBOOT%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $SERIAL_NUMBER: {%$SERIAL_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $TimeZone: {%$TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
@@ -813,7 +825,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_LOCATION: {%ULTIMATE_FILE
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: ULTIMATE_FILE_NAME: {%ULTIMATE_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CACHE_CLEANUP: {%CACHE_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_SYSTEMINFO_OSNAME: {%var_SYSTEMINFO_OSNAME%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_VER: {%$var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI: {%var_WHOAMI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: var_WHOAMI_FQDN: {%var_WHOAMI_FQDN%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WIRELESS_SETUP: {%WIRELESS_SETUP%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -1058,18 +1070,23 @@ ECHO Attempting to install RSAT [NETDOM]...
 ECHO.
 
 :: Windows 10 1809 or later
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM NETDOM installation... >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM RSAT [NETDOM] installation... >> %LOG_LOCATION%\%LOG_FILE%
 IF %$OS_Build% LSS 1809 GoTo skip1809
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing [NETDOM] via DISM for Windows 10 {%$OS_Build%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing RSAT [NETDOM] via DISM for Windows {%$var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %$OS_Build% GEQ 1809 (
 	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P /Quiet
 	)
+SET $DISM_RSAT=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DISM_RSAT {%$DISM_RSAT%} >> %LOG_LOCATION%\%LOG_FILE%
 (NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
 IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
 IF %NETDOM_PRESENCE% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% NEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	[NETDOM] failed to install via DISM! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% NEQ 1 (NETDOM HELP 2> nul) || (SET NETDOM_PRESENCE=0)
 IF %NETDOM_PRESENCE% EQU 1 GoTo autoSU
+REM With Windows 11 24H2 even though RSAT installs it doesn't seem to be initiazed until Reboot.
+IF %NETDOM_PRESENCE% NEQ 1 SET $REBOOT=1
+IF %NETDOM_PRESENCE% NEQ 1 GoTo feTime
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: DISM NETDOM installation. >> %LOG_LOCATION%\%LOG_FILE%
 :skip1809
 
@@ -1150,7 +1167,7 @@ ECHO Working on Scheduled Task as a local computer...
 
 :trapSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
-SCHTASKS /Query /TN "%SCRIPT_NAME%" && GoTo skipSTL
+(SCHTASKS /Query /TN "%SCRIPT_NAME%" 2> nul) && GoTo skipSTL
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap for Local computer Scheduled Task! >> %LOG_LOCATION%\%LOG_FILE%
 
 :fSTL
@@ -1351,9 +1368,10 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION GETMAC.
 GoTo trap31
 
 :trap31
+REM Depracted since using powershell
 :: Trap to catch if NETDOM is present or not
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
+:: IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
+:: IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
 GoTo fhost
 
 :fhost
@@ -1369,7 +1387,10 @@ FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\cache\MAC-2-HOST.txt")
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	HOST_STRING: %HOST_STRING% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "HOST_STRING"=="" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%HOST_STRING%} found in HOST_FILE_DATABASE {%HOST_FILE_DATABASE%}) >>	%LOG_LOCATION%\%LOG_FILE%
 IF /I %COMPUTERNAME%==%HOST_STRING% GoTo Skip3
-NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || GoTo err30
+REM adding PowerShell as a backup
+IF %NETDOM_PRESENCE% EQU 1 NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || GoTo err30
+IF %NETDOM_PRESENCE% EQU 0 @powershell Rename-Computer -NewName "%HOST_STRING%"
+SET $REBOOT=1
 IF %ERRORLEVEL% EQU 0 Echo %DATE% %TIME% Hostname [%COMPUTERNAME%] is being changed to [%HOST_STRING%]! > %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%COMPUTERNAME%} has been renamed to: {%HOST_STRING%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO Hostname [%COMPUTERNAME%] has been renamed to: %HOST_STRING%
@@ -1397,6 +1418,7 @@ GoTo step4
 :step4
 :: Joins the computer to a Domain if chosen to do so
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step4 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\FAILED_RSAT_Installation.txt" GoTo step5
 ECHO Step 4: Working on joining the computer to a Windows Domain network...
 
 :trap4
@@ -1577,7 +1599,10 @@ SET /P CHOCO_PACKAGE_RUN= < "%CHOCO_PACKAGE_LOCATION%\%CHOCO_PACKAGE_FILE%"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE:CHOCO_PACKAGE_RUN: {%CHOCO_PACKAGE_RUN%} >> %LOG_LOCATION%\%LOG_FILE%
 
 :: FUNCTION RUN Chocolatey
-ECHO %DATE% %TIME% %var_CHOCOLATEY% is running... >> %LOG_LOCATION%\Running_Chocolatey.txt
+ECHO %DATE% %TIME% is running... >> %LOG_LOCATION%\Running_Chocolatey.txt
+echo Chocolatey version: %var_CHOCOLATEY% >> %LOG_LOCATION%\Running_Chocolatey.txt
+echo Meta package name: %CHOCO_META_PACKAGE% >> %LOG_LOCATION%\Running_Chocolatey.txt
+echo Meta package file: %CHOCO_PACKAGE_FILE% >> %LOG_LOCATION%\Running_Chocolatey.txt
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Working on Chocolatey package management... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO. >> %LOG_LOCATION%\Running_Chocolatey.txt
 ECHO %CHOCO_PACKAGE_RUN% >> %LOG_LOCATION%\Running_Chocolatey.txt
@@ -2002,6 +2027,7 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Unattend.xml cle
 
 :: Cleanup up RSAT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Cleanup... >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\FAILED_RSAT_Installation.txt GoTo skipCRSAT
 IF %DEBUG_MODE% EQU 1 GoTo skipCRSAT
 IF %RSAT_STATUS% EQU 0 GoTo skipCRSAT
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" GoTo skipCRSAT
@@ -2012,6 +2038,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_STATUS_
 IF %RSAT_STATUS_CODE% GTR 0 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	There's an error trying to remove RSAT from the system!	>> %LOG_LOCATION%\%LOG_FILE%
 :skipCRSAT
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: RSAT Cleanup. >> %LOG_LOCATION%\%LOG_FILE%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::	Avoid ERROR Section
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: end >> %LOG_LOCATION%\%LOG_FILE%
@@ -2058,10 +2085,11 @@ GoTo feTime
 :err01
 :: ERROR 01 (NETDOM)
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error01 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	RSAT NETDOM is not installed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Aborting %SCRIPT_NAME%! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	RSAT NETDOM failed to install! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Domain Join will be skipped! >> %LOG_LOCATION%\%LOG_FILE%
+echo %ISO_DATE% %TIME% > %LOG_LOCATION%\FAILED_RSAT_Installation.txt
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error01 >> %LOG_LOCATION%\%LOG_FILE%
-GoTo feTime
+GoTo autoSU
 
 :err02
 :: ERROR 02 (No Host Database Found)
@@ -2416,6 +2444,7 @@ IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
 IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q /F "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
 ::	kill the runout file
 IF EXIST "%LOG_LOCATION%\WPF_runout.txt" DEL /Q /F "%LOG_LOCATION%\WPF_runout.txt"
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %$REBOOT% EQU 1 shutdown /r /t 10
 ENDLOCAL
 TIMEOUT 30
 EXIT

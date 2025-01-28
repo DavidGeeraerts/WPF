@@ -150,7 +150,8 @@ echo.
 ECHO %DATE% %TIME% Updated! > "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
 for /f "skip=1 tokens=2 delims==" %%P IN ('wmic TIMEZONE GET StandardName /VALUE') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
 for /f "skip=1 tokens=2 delims==" %%P IN ('wmic timezone get caption /value') DO ECHO %%P >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
-
+echo. >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
+IF EXIST %FLASH_DRIVE_VOLUME% dir /A:A /O-DN %FLASH_DRIVE_VOLUME% >> "%FLASH_DRIVE_VOLUME%\LastUpdated.txt"
 
 :: When complete
 IF EXIST %FLASH_DRIVE_VOLUME% dir /A:A /O-DN %FLASH_DRIVE_VOLUME% 

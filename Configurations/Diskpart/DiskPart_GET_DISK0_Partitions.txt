@@ -1,0 +1,3 @@
+Select disk 0
+List partition
+exit

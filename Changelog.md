@@ -22,6 +22,24 @@
 
 ---
 
+## Version 4.17.0 (2025-01-28)
+#### Added
+- reboot flag
+- Windows product key
+- RSAT install error catch
+- choco package detail logging
+- domain join logging
+- reboot check
+
+#### Changed
+- var_ver to $var_ver
+- NETDOM to DISM_RSAT variable
+- sch task suppress error
+- netdom to powershell for hostname change
+
+---
+
+
 ## Version 4.16.0 (2024-10-15)
 #### Added
 - Configurations folder
@@ -40,9 +58,6 @@
 #### Removed
 - Difference with Public repo
 - Archive folder
-
----
-
 
 ## Version 4.15.0 (2024-01-22)
 #### Changed
