@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.17.1
-SET SCRIPT_BUILD=20250128 1000
+SET SCRIPT_VERSION=4.17.2
+SET SCRIPT_BUILD=20250128 1200
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1373,10 +1373,9 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION GETMAC.
 GoTo trap31
 
 :trap31
-REM Depracted since using powershell
 :: Trap to catch if NETDOM is present or not
-:: IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-:: IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
 GoTo fhost
 
 :fhost
@@ -1420,8 +1419,9 @@ GoTo step4
 
 :: REBOOT TRAP	:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::	RSAT requires a reboot after installation
-IF %$REBOOT% EQU 1(
+IF %$REBOOT% EQU 1 (
 	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
+	shutdown /r /t 15
 	GoTo feTime
 	)
 :://///////////////////////////////////////////////////////////////////////////
