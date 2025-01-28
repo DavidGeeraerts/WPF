@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.17.0
-SET SCRIPT_BUILD=20250124 1100
+SET SCRIPT_VERSION=4.17.1
+SET SCRIPT_BUILD=20250128 1000
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -642,11 +642,11 @@ VER | FIND /I "Version 10." && (
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Operating System Information. >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Product key assocaited with Windows OS
-@powershell (Get-WmiObject -Query "SELECT OA3xOriginalProductKey FROM SoftwareLicensingService").OA3xOriginalProductKey > "%LOG_LOCATION%\cache\Product_Key.txt"
+@powershell (Get-WmiObject -Query 'SELECT * FROM SoftwareLicensingService').OA3xOriginalProductKey > "%LOG_LOCATION%\cache\Product_Key.txt"
 SET /P $PRODUCT_KEY= < "%LOG_LOCATION%\cache\Product_Key.txt"
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	$PRODUCT_KEY: {%$PRODUCT_KEY%} >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT DEFINED $PRODUCT_KEY IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Something went wrong tryin to get OS Product Key! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	OS Product Key: %$PRODUCT_KEY% >> %LOG_LOCATION%\%LOG_FILE%
-
 
 :: Computer Architecture
 ::	DEPRECATED: FOR /F "tokens=3 delims=:- " %%A IN ('FIND /I "System Type" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET COMPUTER_ARCHITECTURE=%%A
@@ -981,7 +981,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETWORK_CONN
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(5) NETDOM
+::	(5) Remote Server Administration Tools (RSAT)
 ::		Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
 ::	not present until proven otherwise
 Echo Checking for NETDOM presence...
@@ -994,6 +994,7 @@ SET NETDOM_PRESENCE=0
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	NETDOM RETURNED ERROR: %NETDOM_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_ERROR% EQU 9009 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	RSAT (NETDOM) is not installed! >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %NETDOM_PRESENCE% EQU 1 IF EXIST "%LOG_LOCATION%\FAILED_RSAT_Installation.txt" DEL /F /Q "%LOG_LOCATION%\FAILED_RSAT_Installation.txt"
 IF %NETDOM_PRESENCE% EQU 0 ECHO NETDOM is NOT present!
 IF %NETDOM_PRESENCE% EQU 1 ECHO NETDOM is present!
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [5]: checking if NETDOM is present. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1064,8 +1065,9 @@ GoTo autoSU
 ::	Either use DISM or try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present for older versions of Windows 10 1803 or older.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {9}: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
 IF %NETDOM_PRESENCE% EQU 1 GoTo Start
+SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
+echo %RSAT_ATTEMPT% > %LOG_LOCATION%\cache\var_RSAT_attempt.txt
 IF %RSAT_ATTEMPT% EQU 3 GoTo err01
-
 ECHO Attempting to install RSAT [NETDOM]...
 ECHO.
 
@@ -1074,10 +1076,13 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM RSAT [NETD
 IF %$OS_Build% LSS 1809 GoTo skip1809
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing RSAT [NETDOM] via DISM for Windows {%$var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %$OS_Build% GEQ 1809 (
-	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P /Quiet
+	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
 	)
 SET $DISM_RSAT=%ERRORLEVEL%
+REM With Windows 11 24H2 even though RSAT installs it doesn't seem to be initiazed until Reboot.
+IF %$DISM_RSAT% EQU 0 SET $REBOOT=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DISM_RSAT {%$DISM_RSAT%} >> %LOG_LOCATION%\%LOG_FILE%
+
 (NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
 IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
 IF %NETDOM_PRESENCE% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
@@ -1413,12 +1418,18 @@ IF EXIST %LOG_LOCATION%\cache\MAC-2-HOST.txt (TYPE %LOG_LOCATION%\cache\MAC-2-HO
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
 
-
+:: REBOOT TRAP	:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::	RSAT requires a reboot after installation
+IF %$REBOOT% EQU 1(
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
+	GoTo feTime
+	)
 :://///////////////////////////////////////////////////////////////////////////
+
+
 :step4
 :: Joins the computer to a Domain if chosen to do so
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step4 >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\FAILED_RSAT_Installation.txt" GoTo step5
 ECHO Step 4: Working on joining the computer to a Windows Domain network...
 
 :trap4
@@ -2440,8 +2451,9 @@ IF EXIST "%LOG_SHIPPING_LOCATION%\%SCRIPT_NAME%_%COMPUTERNAME%_%ISO_DATE%_%WPF_R
 :: Console logoff
 IF EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% (IF "%DEFAULT_USER%"=="%CONSOLE_USER%" shutdown /r /t 10)
 IF /I "%DEFAULT_USER%"=="%CONSOLE_USER%" logoff console
-:: Kill the running file
+:: Kill the running files
 IF EXIST "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt" DEL /Q /F "%LOG_LOCATION%\RUNNING_%SCRIPT_NAME%.txt"
+IF EXIST "%LOG_LOCATION%\RUNNING_%ULTIMATE_FILE_NAME%.txt" DEL /Q /F "%LOG_LOCATION%\RUNNING_%ULTIMATE_FILE_NAM%.txt"
 ::	kill the runout file
 IF EXIST "%LOG_LOCATION%\WPF_runout.txt" DEL /Q /F "%LOG_LOCATION%\WPF_runout.txt"
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% IF %$REBOOT% EQU 1 shutdown /r /t 10
