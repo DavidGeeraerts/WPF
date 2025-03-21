@@ -26,7 +26,7 @@ CD %~dp1
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Dev_Seed_Updater
-SET Version=3.8.0
+SET Version=3.9.0
 Title %Name% Version:%Version%
 Prompt WPF$G
 color 0B
@@ -47,7 +47,7 @@ SET FLASH_DRIVE_VOLUME=F:
 SET FLASH_DRIVE_VOLUME_KEYWORD=POSTFLIGHT
 SET "SEED_SOURCE_WPF=D:\Projects\Script Code\Windows Post-Flight"
 SET "SEED_SOURCE_CHOCO=D:\Projects\Script Code\Chocolatey"
-SET "SEED_SOURCE_ULTI=D:\Projects\Script Code\Windows_Ultimate_Commandlet"
+SET "SEED_SOURCE_ULTI=D:\Projects\Script Code\Windows_Ultimate_Playbook"
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
 ::##### Everything below here is 'hard-coded' [DO NOT MODIFY] #####
@@ -76,7 +76,7 @@ echo.
 (hostname | find /I "%MASTER_PC%" 2> nul) && GoTo skipD
 SET "SEED_SOURCE_WPF=\\%MASTER_PC%\D$\Projects\Script Code\Windows Post-Flight"
 SET "SEED_SOURCE_CHOCO=\\%MASTER_PC%\D$\Projects\Script Code\Chocolatey"
-SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\Projects\Script Code\Windows_Ultimate_Commandlet"
+SET "SEED_SOURCE_ULTI=\\%MASTER_PC%\D$\Projects\Script Code\Windows_Ultimate_Playbook"
 :skipD
 
 
@@ -130,7 +130,7 @@ IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_WPF%\Configurations\Diskpa
 :: All of the Chocolatey support files
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_CHOCO%" "%FLASH_DRIVE_VOLUME%\Chocolatey" *.* /MIR /R:2 /W:5
 
-:: Ultimate script
+:: Playbook Ultimate script
 IF EXIST %FLASH_DRIVE_VOLUME%\ ROBOCOPY "%SEED_SOURCE_ULTI%" "%FLASH_DRIVE_VOLUME%" SC_Sorcerer's_Apprentice_Dev.cmd /R:2 /W:5
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd" del /F /Q "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice.cmd"
 IF EXIST "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" rename "%FLASH_DRIVE_VOLUME%\SC_Sorcerer's_Apprentice_Dev.cmd" SC_Sorcerer's_Apprentice.cmd

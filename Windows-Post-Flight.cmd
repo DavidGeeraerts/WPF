@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.17.1
-SET SCRIPT_BUILD=20250128 1000
+SET SCRIPT_VERSION=4.18.0
+SET SCRIPT_BUILD=20250321 0800
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -113,7 +113,7 @@ SET CHOCO_META_PACKAGE=Universal
 SET "CHOCO_PACKAGE_LOCATION=%POST_FLIGHT_DIR%\Chocolatey"
 SET CHOCO_PACKAGE_FILE=Chocolatey_%CHOCO_META_PACKAGE%_Packages.txt
 
-:: Ultimate Commandlet configurations
+:: Playbook Ultimate Commandlet configurations
 ::  %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%
 SET "ULTIMATE_FILE_LOCATION=%POST_FLIGHT_DIR%"
 SET ULTIMATE_FILE_NAME=Windows_Ultimate.cmd
@@ -135,14 +135,12 @@ SET PROCESS_3_FILE_NAME=3_Process_Hostname_Change.txt
 SET PROCESS_4_FILE_NAME=4_Process_Domain_Join.txt
 :: Process 5: Run Chocolatey
 SET PROCESS_5_FILE_NAME=5_Process_Chocolatey.txt
-:: Process 6: Run Ultimate script
-SET PROCESS_6_FILE_NAME=6_Process_Windows_Ultimate.txt
-:: Process 7: Run Windows update script
-SET PROCESS_7_FILE_NAME=7_Process_Windows_Update.txt
-
+:: Process 6: Run Windows update script
+SET PROCESS_6_FILE_NAME=6_Process_Windows_Update.txt
+:: Process 7: Run Playbook Ultimate script
+SET PROCESS_7_FILE_NAME=7_Process_Playbook_Ultimate.txt
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
-
 
 :: To cleanup or Not to cleanup, the seed location
 ::  0 = OFF (NO)
@@ -715,16 +713,6 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	IPv6 Address: %$IPV6% >>
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Networking. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-:: Misc. Variables ::
-:: RSAT Attempts
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: RSAT Attempts... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\FirstTimeRun.txt DEL /F /Q "%LOG_LOCATION%\cache\var_RSAT_attempt.txt"
-IF NOT EXIST %LOG_LOCATION%\cache\var_RSAT_attempt.txt (SET RSAT_ATTEMPT=0) ELSE (
-	IF EXIST %LOG_LOCATION%\FirstTimeRun.txt SET RSAT_ATTEMPT=0
-	)
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\cache\var_RSAT_attempt.txt SET /P RSAT_ATTEMPT= < %LOG_LOCATION%\cache\var_RSAT_attempt.txt
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT:RSAT Attempts. >> %LOG_LOCATION%\%LOG_FILE%
 :: SHA 256 Check
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: SHA256 Check... >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%~dp0\%SCRIPT_NAME%_SHA256.txt" IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	%SCRIPT_NAME% SHA256 txt file not found! >> %LOG_LOCATION%\%LOG_FILE%
@@ -738,7 +726,6 @@ IF EXIST "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Check. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 :varS
 :: Start of variable debug
@@ -799,7 +786,6 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: LOG_SHIPPING_LOCATION: {%LOG_SHIPPING_L
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETDOM_DOMAIN: {%NETDOM_DOMAIN%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETDOM_USERD: {%NETDOM_USERD%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETDOM_USERD_PW_FILE: {%NETDOM_USERD_PW_FILE%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETDOM_REBOOT: {%NETDOM_REBOOT%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: POST_FLIGHT_DIR: {%POST_FLIGHT_DIR%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: POST_FLIGHT_CMD_NAME: {%POST_FLIGHT_CMD_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_1_FILE_NAME: {%PROCESS_1_FILE_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -814,9 +800,6 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_CHECK_NUMBER: {%PROCESS_CHECK_N
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: PROCESS_INCOMPLETE_FILE: {INCOMPLETE_%SCRIPT_NAME%.log} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REPO_SHA256_URI: {%REPO_SHA256_URI%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: REQUIRE_REPO_SHA256_CHECK: {%REQUIRE_REPO_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_PACKAGE_W10x64: {%RSAT_PACKAGE_W10x64%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_ATTEMPT: {%RSAT_ATTEMPT%} >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: RSAT_STATUS: {%RSAT_STATUS%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SEED_LOCATION_CLEANUP: {%SEED_LOCATION_CLEANUP%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_NAME: {%SCRIPT_NAME%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: SCRIPT_VERSION: {%SCRIPT_VERSION%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -909,7 +892,7 @@ IF NOT EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF %LOG_LEVEL_INFO% EQU 1 ECHO %I
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [1] for Everything Already Done. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(2) Get the Seed Drive Volume
+::	Get the Seed Drive Volume
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [2]: Looking for a seed drive... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Looking for a seed drive with volume label [%SEED_DRIVE_VOLUME_LABEL%]...
 ECHO.
@@ -931,7 +914,7 @@ IF EXIST %LOG_LOCATION%\cache\FOUND_SEED_DRIVE.txt del /F /Q %LOG_LOCATION%\cach
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [2]: Looking for a seed drive. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(3)	Update seed location from Seed Drive
+::	Update seed location from Seed Drive
 ::		this must include the host file database
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [3]: update seed location if seed drive found... >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Seed location: %POST_FLIGHT_DIR%
@@ -954,7 +937,7 @@ attrib -R -S -H "%POST_FLIGHT_DIR%" /D 2> nul
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [3]: update seed location if seed drive found. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(4) Wireless Network Connection
+::	Wireless Network Connection
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Not configured for wireless network! >> %LOG_LOCATION%\%LOG_FILE%
 IF %WIRELESS_SETUP% EQU 0 GoTo jump4W
@@ -981,26 +964,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: NETWORK_CONN
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [4]: Connect to a wireless network... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(5) Remote Server Administration Tools (RSAT)
-::		Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
-::	not present until proven otherwise
-Echo Checking for NETDOM presence...
-ECHO.
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [5]: checking if NETDOM is present... >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
-SET NETDOM_PRESENCE=0
-(NETDOM HELP 2> nul) & (SET NETDOM_ERROR=%ERRORLEVEL%) 
-(NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	NETDOM RETURNED ERROR: %NETDOM_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_ERROR% EQU 9009 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	RSAT (NETDOM) is not installed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% EQU 1 IF EXIST "%LOG_LOCATION%\FAILED_RSAT_Installation.txt" DEL /F /Q "%LOG_LOCATION%\FAILED_RSAT_Installation.txt"
-IF %NETDOM_PRESENCE% EQU 0 ECHO NETDOM is NOT present!
-IF %NETDOM_PRESENCE% EQU 1 ECHO NETDOM is present!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [5]: checking if NETDOM is present. >> %LOG_LOCATION%\%LOG_FILE%
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-::	(6) Password Files
+::	Password Files
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 Echo Checking for password files...
 ECHO.
@@ -1020,7 +984,7 @@ IF NOT EXIST %POST_FLIGHT_DIR%\Configurations\%NETDOM_USERD_PW_FILE% ECHO Domain
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [6]: looking for password files... >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(7) HOST DATABASE
+::	HOST DATABASE
 Echo Checking for host database...
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check [7]: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
@@ -1032,7 +996,7 @@ IF NOT EXIST %HOST_FILE_DATABASE_LOCATION%\%HOST_FILE_DATABASE% GoTo err02
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check [7]: Looking for host database. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-::	(8) Chocolatey
+:: Chocolatey
 Echo Checking for Chocolatey...
 ECHO.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Meta Dependency Check [8]: checking if Chocolatey is present... >> %LOG_LOCATION%\%LOG_FILE%
@@ -1055,102 +1019,6 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump8 >> %LOG_L
 :: jump to create a scheduled task
 GoTo autoSU
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-:: jump to create a scheduled task
-GoTo autoSU
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-:installRSAT
-::	(9) Try and fix NETDOM DEPENDENCY
-::	Either use DISM or try and install Remote Server Administration Tools (NETDOM) from seed location or seed drive if present for older versions of Windows 10 1803 or older.
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Dependency Check {9}: Trying to install Remote Server Administrative Tools [NETDOM] if not present... >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% EQU 1 GoTo Start
-SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
-echo %RSAT_ATTEMPT% > %LOG_LOCATION%\cache\var_RSAT_attempt.txt
-IF %RSAT_ATTEMPT% EQU 3 GoTo err01
-ECHO Attempting to install RSAT [NETDOM]...
-ECHO.
-
-:: Windows 10 1809 or later
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: DISM RSAT [NETDOM] installation... >> %LOG_LOCATION%\%LOG_FILE%
-IF %$OS_Build% LSS 1809 GoTo skip1809
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Installing RSAT [NETDOM] via DISM for Windows {%$var_VER%} >> %LOG_LOCATION%\%LOG_FILE%
-IF %$OS_Build% GEQ 1809 (
-	FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
-	)
-SET $DISM_RSAT=%ERRORLEVEL%
-REM With Windows 11 24H2 even though RSAT installs it doesn't seem to be initiazed until Reboot.
-IF %$DISM_RSAT% EQU 0 SET $REBOOT=1
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $DISM_RSAT {%$DISM_RSAT%} >> %LOG_LOCATION%\%LOG_FILE%
-
-(NETDOM HELP 2> nul) && (SET NETDOM_PRESENCE=1)
-IF %NETDOM_PRESENCE% EQU 1 DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
-IF %NETDOM_PRESENCE% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% NEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	[NETDOM] failed to install via DISM! >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% NEQ 1 (NETDOM HELP 2> nul) || (SET NETDOM_PRESENCE=0)
-IF %NETDOM_PRESENCE% EQU 1 GoTo autoSU
-REM With Windows 11 24H2 even though RSAT installs it doesn't seem to be initiazed until Reboot.
-IF %NETDOM_PRESENCE% NEQ 1 SET $REBOOT=1
-IF %NETDOM_PRESENCE% NEQ 1 GoTo feTime
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: DISM NETDOM installation. >> %LOG_LOCATION%\%LOG_FILE%
-:skip1809
-
-:: Windows 10 1803 or older
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: NETDOM installation via package... >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %POST_FLIGHT_DIR% (dir /B %POST_FLIGHT_DIR% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt) ELSE (
-	IF EXIST %SEED_DRIVE_VOLUME% dir /B /A %SEED_DRIVE_VOLUME% | FIND /I "%RSAT_PACKAGE_W10x64%" > %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt)
-IF EXIST "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_NETDOM_INSTALL.txt} just got created. >> %LOG_LOCATION%\%LOG_FILE% 
-IF EXIST %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt SET /P NETDOM_INSTALL= < %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt
-IF DEFINED NETDOM_INSTALL IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Package {%NETDOM_INSTALL%} was found and will be used to install RSAT-Remote Server Administrative Tools [NETDOM]. >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT DEFINED NETDOM_INSTALL (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	An error occured looking for RSAT-Remote Server Administrative Tools [NETDOM] installer!) >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT DEFINED NETDOM_INSTALL GoTo err01
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the computer architecture {%COMPUTER_ARCHITECTURE%}... >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt && (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package meets the {%COMPUTER_ARCHITECTURE%} computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%COMPUTER_ARCHITECTURE%" %LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt || (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package doesn't match the computer architecture!) >> %LOG_LOCATION%\%LOG_FILE%
-
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking that the RSAT installer {%NETDOM_INSTALL%} meets the Windows Build {%$OS_Build%}... >> %LOG_LOCATION%\%LOG_FILE%
-FIND /I "%$OS_Build%" "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" && (
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	The RSAT package is a match for the Windows Version {%$OS_Build%}!) >> %LOG_LOCATION%\%LOG_FILE%
-	FIND /I "%$OS_Build%" "%LOG_LOCATION%\cache\var_NETDOM_INSTALL.txt" || (
-	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The RSAT package {%NETDOM_INSTALL%} is NOT a match for the Windows Version {%$OS_Build%}!) >> %LOG_LOCATION%\%LOG_FILE%
-
-REM WILL NEED ERROR CATCHING FOR THE ABOVE TWO CONDITIONS
-
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Trying to install:{%NETDOM_INSTALL%}... >> %LOG_LOCATION%\%LOG_FILE%
-echo.
-ECHO Installing NETDOM with this installer {%NETDOM_INSTALL%}...
-ECHO.
-ECHO (Computer will reboot after instalation!)
-ECHO.
-SET /A "RSAT_ATTEMPT=RSAT_ATTEMPT+1"
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	RSAT_ATTEMPT just got set to {%RSAT_ATTEMPT%}! >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %RSAT_ATTEMPT% > %LOG_LOCATION%\cache\var_RSAT_attempt.txt
-:: The RSAT installer
-"%POST_FLIGHT_DIR%\%NETDOM_INSTALL%" /quiet /norestart
-SET RSAT_INSTALL_ERRORLEVEL=%ERRORLEVEL%
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	RSAT installer return code: %RSAT_INSTALL_ERRORLEVEL% >> %LOG_LOCATION%\%LOG_FILE%
-:: Wait for RSAT Rebooting
-::IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
-:: TIMEOUT 15
-:: Computer should be rebooting now so that RSAT can configure properly
-::  will never reach here if everything worked correctly unless RSAT doesn't initiate a reboot
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	RSAT-Remote Server Administration Tools {%NETDOM_INSTALL%} [NETDOM] attempted to install! >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_INSTALL_ERRORLEVEL% EQU 0 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	RSAT-Remote Server Administration Tools [NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_INSTALL_ERRORLEVEL% GEQ 1 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	RSAT {%NETDOM_INSTALL%} installation failed! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Checking for NETDOM presence... >> %LOG_LOCATION%\%LOG_FILE%
-dir %SYSTEMROOT%\System32 | FIND /I "netdom.exe" && SET NETDOM_PRESENCE=1
-IF %NETDOM_PRESENCE% EQU 0 DIR %SYSTEMROOT%\SysWOW64 | FIND /I "netdom.exe" && SET NETDOM_PRESENCE=1
-IF EXIST %SYSTEMROOT%\SysWOW64\netdom.exe SET "PATH=%PATH%;%SYSTEMROOT%\SysWOW64"
-IF %NETDOM_PRESENCE% EQU 0 (IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR] NETDOM is still NOT present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is now present!) >> %LOG_LOCATION%\%LOG_FILE%
-IF %RSAT_ATTEMPT% GEQ 2 GoTo err01
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: NETDOM installation via package. >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Dependency Check {9}: Remote Server Administrative Tools [NETDOM] check and installation. >> %LOG_LOCATION%\%LOG_FILE%
-GoTo autoSU
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: Automated setup for Windows Post-Flight as Scheduled Task
@@ -1370,14 +1238,6 @@ FOR /F "skip=3 tokens=1" %%G IN (%LOG_LOCATION%\cache\var_Host_MAC.txt) DO FIND 
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	HOST_MAC: %HOST_MAC% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Computer MAC: %HOST_MAC%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: FUNCTION GETMAC. >> %LOG_LOCATION%\%LOG_FILE%
-GoTo trap31
-
-:trap31
-REM Depracted since using powershell
-:: Trap to catch if NETDOM is present or not
-:: IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap3.1 >> %LOG_LOCATION%\%LOG_FILE%
-:: IF %NETDOM_PRESENCE% EQU 0 GoTo installRSAT
-GoTo fhost
 
 :fhost
 :: FUNCTION SET THE HOSTNAME
@@ -1392,10 +1252,8 @@ FOR /F "usebackq skip=2 tokens=1" %%G IN ("%LOG_LOCATION%\cache\MAC-2-HOST.txt")
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	HOST_STRING: %HOST_STRING% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT "HOST_STRING"=="" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%HOST_STRING%} found in HOST_FILE_DATABASE {%HOST_FILE_DATABASE%}) >>	%LOG_LOCATION%\%LOG_FILE%
 IF /I %COMPUTERNAME%==%HOST_STRING% GoTo Skip3
-REM adding PowerShell as a backup
-IF %NETDOM_PRESENCE% EQU 1 NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || GoTo err30
-IF %NETDOM_PRESENCE% EQU 0 @powershell Rename-Computer -NewName "%HOST_STRING%"
-SET $REBOOT=1
+REM adding PowerShell as primary
+NETDOM HELP 1> nul 2> nul && NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || @powershell Rename-Computer -NewName "%HOST_STRING%" -Restart
 IF %ERRORLEVEL% EQU 0 Echo %DATE% %TIME% Hostname [%COMPUTERNAME%] is being changed to [%HOST_STRING%]! > %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%COMPUTERNAME%} has been renamed to: {%HOST_STRING%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO Hostname [%COMPUTERNAME%] has been renamed to: %HOST_STRING%
@@ -1418,21 +1276,13 @@ IF EXIST %LOG_LOCATION%\cache\MAC-2-HOST.txt (TYPE %LOG_LOCATION%\cache\MAC-2-HO
 GoTo step4
 :://///////////////////////////////////////////////////////////////////////////
 
-:: REBOOT TRAP	:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::	RSAT requires a reboot after installation
-IF %$REBOOT% EQU 1(
-	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Rebooting due to RSAT installation... >> %LOG_LOCATION%\%LOG_FILE%
-	GoTo feTime
-	)
-:://///////////////////////////////////////////////////////////////////////////
-
-
 :step4
 :: Joins the computer to a Domain if chosen to do so
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step4 >> %LOG_LOCATION%\%LOG_FILE%
 ECHO Step 4: Working on joining the computer to a Windows Domain network...
 
 :trap4
+REM Joining to a Windows domain must be configured in the config file.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4 >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 :: Check to make sure a domain is configured, otherwise not joining a domain
@@ -1447,6 +1297,7 @@ IF /I NOT "%NETDOM_DOMAIN%"=="" GoTo trap40
 :trap40
 ::	Trap 4.0 Check on NETDOM password, otherwise Abort
 ::	Authentication required!
+REM No point in trying to join Windows domain if there's no credentials.
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.0... >> %LOG_LOCATION%\%LOG_FILE%
 SET ERROR_NETDOM_P=0
 IF NOT DEFINED NETDOM_PASSWORDD SET ERROR_NETDOM_P=1
@@ -1456,9 +1307,41 @@ IF %ERROR_NETDOM_P% EQU 1 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO
 IF %ERROR_NETDOM_P% EQU 1 GoTo skip41
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap4.0. >> %LOG_LOCATION%\%LOG_FILE%
 
+
 :trap41
-:: TRAP4.1 to catch if the computer has already been joined to a domain
+:: Remote Server Administration Tools (RSAT)
+::	Part of RSAT (Remote Server Administration Tools) --NETDOM utility included
+::	NETDOM is used to join computer to the domain
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 (ECHO %ISO_DATE% %TIME% [INFO]	Dependency check: for NETDOM presence...) >> %LOG_LOCATION%\%LOG_FILE%
+SET $NETDOM_PRESENCE=0
+NETDOM HELP 1> nul 2> nul
+SET $NETDOM_ERROR=%ERRORLEVEL%
+IF %$NETDOM_ERROR% EQU 0 SET $NETDOM_PRESENCE=1
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	NETDOM RETURNED ERROR: %$NETDOM_ERROR% >> %LOG_LOCATION%\%LOG_FILE%
+IF %$NETDOM_ERROR% EQU 9009 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	RSAT (NETDOM) is not installed! >> %LOG_LOCATION%\%LOG_FILE%
+IF %$NETDOM_PRESENCE% EQU 1 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	NETDOM is present!) >> %LOG_LOCATION%\%LOG_FILE%
+IF %$NETDOM_PRESENCE% EQU 1 GoTo skip41
+FOR /F "tokens=3 delims=: " %%P IN ('DISM /online /get-capabilities ^| FIND /I "RSAT.ActiveDirectory"') DO DISM /Online /add-capability /CapabilityName:%%P
+(NETDOM HELP 1> nul 2> nul) && (SET $NETDOM_PRESENCE=1)
+IF %$NETDOM_PRESENCE% EQU 0 (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	[NETDOM] failed to install via DISM! >> %LOG_LOCATION%\%LOG_FILE%
+	echo %DATE% %TIME% > "%LOG_LOCATION%\cache\FAILED_RSAT_Installation.txt"
+	)
+IF %$NETDOM_PRESENCE% EQU 1 (
+	IF EXIST "%LOG_LOCATION%\cache\FAILED_RSAT_Installation.txt" DEL /F /Q "%LOG_LOCATION%\cache\FAILED_RSAT_Installation.txt"
+	DISM /online /Get-CapabilityInfo /CapabilityName:Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0 > %LOG_LOCATION%\cache\DISM_RSAT.txt
+	IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	[NETDOM] successfully installed! >> %LOG_LOCATION%\%LOG_FILE%
+	)
+:skip41
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap4.1 >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Abort Domain Join if NETDOM is not present
+IF %$NETDOM_PRESENCE% EQU 0 GoTo skip4
+
+:trap42
+:: TRAP4.2 to catch if the computer has already been joined to a domain
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.2 >> %LOG_LOCATION%\%LOG_FILE%
 ::	multiple checks to really make sure...
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% GoTo skip4
 IF /I "%NETDOM_DOMAIN%"=="%USERDOMAIN%" GoTo skip4
@@ -1467,16 +1350,14 @@ IF /I "%NETDOM_DOMAIN%"=="%USERDNSDOMAIN%" GoTo skip4
 FOR /F "tokens=2 delims= " %%D IN ('FINDSTR /C:"Domain" %LOG_LOCATION%\cache\var_systeminfo.txt') DO SET DOMAIN_ASSOCIATION=%%D
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Current domain association is {%DOMAIN_ASSOCIATION%} >> %LOG_LOCATION%\%LOG_FILE%
 IF /I "%NETDOM_DOMAIN%"=="%DOMAIN_ASSOCIATION%" GoTo skip4
-IF %NETDOM_PRESENCE% EQU 0 GoTo err01
 :: Check to make sure computer can communicate with Windows domain
 ::  DNS is required
 NSLOOKUP %NETDOM_DOMAIN% | FIND "Name" || GoTo err42
 :: NETDOM QUERY DC /Domain:%NETDOM_DOMAIN% /User:%NETDOM_USERD% /PASSWORDD:%NETDOM_PASSWORDD% || GoTo err42
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap4.1 >> %LOG_LOCATION%\%LOG_FILE%
-GoTo trap42
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap4.2 >> %LOG_LOCATION%\%LOG_FILE%
 
-:trap42
-:: TRAP4.2 to check on computer object in Active Directory
+:trap43
+:: TRAP4.3 to check on computer object in Active Directory
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap4.2 AD Computer object check... >> %LOG_LOCATION%\%LOG_FILE%
 DSQUERY COMPUTER domainroot -o rdn -name %COMPUTERNAME% -d %NETDOM_DOMAIN% -u %NETDOM_USERD% -p %NETDOM_PASSWORDD% -uc > %LOG_LOCATION%\cache\var_dsquery_computer.txt
 SET /P AD_OBJECT_COMPUTER_QUERY= < %LOG_LOCATION%\cache\var_dsquery_computer.txt

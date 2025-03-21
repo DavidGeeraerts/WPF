@@ -22,6 +22,20 @@
 
 ---
 
+## Version 4.18.0 (2025-03-21)
+#### Added
+- some REM
+  
+#### Changed
+- Handling of RSAT install
+- Order of process, Windows Playbook Ultimate to last
+- Step4 trap numbering
+
+#### Removed
+- Numbering from dependencies
+
+---
+
 ## Version 4.17.0 (2025-01-28)
 #### Added
 - reboot flag
@@ -36,8 +50,6 @@
 - NETDOM to DISM_RSAT variable
 - sch task suppress error
 - netdom to powershell for hostname change
-
----
 
 
 ## Version 4.16.0 (2024-10-15)
