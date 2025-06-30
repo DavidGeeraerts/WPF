@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.18.0
-SET SCRIPT_BUILD=20250321 0800
+SET SCRIPT_VERSION=4.18.1
+SET SCRIPT_BUILD=20250630 1015
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -1253,7 +1253,7 @@ IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	HOST_STRING: %HOST_STR
 IF NOT "HOST_STRING"=="" (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%HOST_STRING%} found in HOST_FILE_DATABASE {%HOST_FILE_DATABASE%}) >>	%LOG_LOCATION%\%LOG_FILE%
 IF /I %COMPUTERNAME%==%HOST_STRING% GoTo Skip3
 REM adding PowerShell as primary
-NETDOM HELP 1> nul 2> nul && NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || @powershell Rename-Computer -NewName "%HOST_STRING%" -Restart
+NETDOM HELP 1> nul 2> nul && NETDOM RENAMECOMPUTER %computername% /NewName:%HOST_STRING% /FORCE /REBoot:%NETDOM_REBOOT% || @powershell Rename-Computer -NewName "%HOST_STRING%" -Force
 IF %ERRORLEVEL% EQU 0 Echo %DATE% %TIME% Hostname [%COMPUTERNAME%] is being changed to [%HOST_STRING%]! > %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Hostname {%COMPUTERNAME%} has been renamed to: {%HOST_STRING%}) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO Hostname [%COMPUTERNAME%] has been renamed to: %HOST_STRING%
@@ -1261,6 +1261,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Hostname [%HOST
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_3_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer is rebooting in {%NETDOM_REBOOT%} seconds! >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_3_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds!
+shutdown -r -t %NETDOM_REBOOT%
 :: Goes to FUNCTION END TIME since the computer is rebooting
 GoTo feTime
 

@@ -22,6 +22,13 @@
 
 ---
 
+## Version 4.18.1 (2025-06-30)
+#### Fixed
+- logging for hostname rename
+
+---
+
+
 ## Version 4.18.0 (2025-03-21)
 #### Added
 - some REM
@@ -33,9 +40,7 @@
 
 #### Removed
 - Numbering from dependencies
-
----
-
+  
 ## Version 4.17.0 (2025-01-28)
 #### Added
 - reboot flag
