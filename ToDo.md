@@ -1,22 +1,21 @@
 # Windows Post Flight ToDo 
 
 ## Add
-- @powershell Rename-Computer -NewName "NewHostname" -Restart
-- @powershell Add-Computer -DomainName "YourDomainName" -Restart
 
-- Check for INCOMPLETE file and write to log
-- Dump all the process complete logs into a report instead of the COMPLETED_log
-- COMPLETED_log should just have a timestamp
+- Config file parameter to remove domain admins from domain computer
 
-- All variables start with "$"
+
+
 
 	
 
 ## Change
-- Windows Ultimate Playbook should be last to run.
-
+- All variables start with "$"
+- Dump all the process complete logs into a report instead of the COMPLETED_log
+- COMPLETED_log should just have a timestamp
 
 ## Fix
+- Check for INCOMPLETE file and write to log
 
 - With Windows 11 24H2, RSAT install seems to require reboot before working.
 - Wireless [wi-fi] doesn't parse IPv4 correctly since using netsh
@@ -42,6 +41,14 @@
 
 
 ## DONE
+
+#### 2025-07
+- @powershell Rename-Computer -NewName "NewHostname" -Restart
+- @powershell Add-Computer -DomainName "YourDomainName" -Restart
+- Windows Ultimate Playbook should be last to run.
+
+
+
 
 #### 2024-10-17
 - Product Key
