@@ -428,8 +428,7 @@ IF DEFINED POST_FLIGHT_DIR CD /D %POST_FLIGHT_DIR%
 :: Now that logging is configured, move some temp cache files
 IF NOT EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" IF EXIST "%TEMP%\cache\var_PS_Version.txt" COPY /Y "%TEMP%\cache\var_PS_Version.txt" "%LOG_LOCATION%\cache" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {var_PS_Version.txt} got copied to [%LOG_LOCATION%\cache]. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST "%LOG_LOCATION%\cache\Script_Start.txt" ECHO %START_TIME%> "%LOG_LOCATION%\cache\Script_Start.txt"
-IF EXIST "%LOG_LOCATION%\FirstTimeRun.txt" IF EXIST "%LOG_LOCATION%\cache\WPF_Start_Time.txt" DEL /F /Q "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
-IF NOT EXIST "%LOG_LOCATION%\cache\WPF_Start_Time.txt" ECHO %START_TIME%> "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
+IF NOT EXIST "%LOG_LOCATION%\cache\WPF_Start_Time.txt" echo %START_TIME%> "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: POST FLIGHT IS Running
@@ -2300,10 +2299,8 @@ IF EXIST "%LOG_LOCATION%\WPF_runout.txt" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DA
 IF EXIST "%LOG_LOCATION%\WPF_runout.txt" GoTo skipTLT
 IF NOT EXIST "%LOG_LOCATION%\%PROCESS_COMPLETE_FILE%" IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Skipping total lapse time. >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %LOG_LOCATION%\%PROCESS_COMPLETE_FILE% GoTo skipTLT
-SET /P WPF_START_TIME= < "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
-IF EXIST "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt" DEL /Q /F "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt"
-IF %PS_STATUS% EQU 0 GoTo skipTLT
-@PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%WPF_START_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt"
+SET /P $WPF_START_TIME= < "%LOG_LOCATION%\cache\WPF_Start_Time.txt"
+@PowerShell.exe -c "$span=([datetime]'%Time%' - [datetime]'%$WPF_START_TIME%'); '{0:00}:{1:00}:{2:00}' -f $span.Hours, $span.Minutes, $span.Seconds" > "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt"
 SET /P WPF_TOTAL_TIME= < "%LOG_LOCATION%\cache\WPF_Total_Lapsed_Time.txt"
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	WPF Total time lapse (hh:mm:ss): %WPF_TOTAL_TIME% >> %LOG_LOCATION%\%LOG_FILE%
 :: Calculate # reboots
