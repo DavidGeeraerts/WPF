@@ -40,8 +40,8 @@ color 9E
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
 SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.18.1
-SET SCRIPT_BUILD=20250630 1015
+SET SCRIPT_VERSION=4.19.0
+SET SCRIPT_BUILD=20250715 0800
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -138,7 +138,7 @@ SET PROCESS_5_FILE_NAME=5_Process_Chocolatey.txt
 :: Process 6: Run Windows update script
 SET PROCESS_6_FILE_NAME=6_Process_Windows_Update.txt
 :: Process 7: Run Playbook Ultimate script
-SET PROCESS_7_FILE_NAME=7_Process_Playbook_Ultimate.txt
+SET PROCESS_7_FILE_NAME=7_Process_Ultimate_Playbook.txt
 :: Completed File name
 SET PROCESS_COMPLETE_FILE=COMPLETED_%SCRIPT_NAME%.log
 
@@ -726,6 +726,14 @@ IF EXIST "%LOG_LOCATION%\cache\var_WPF_SHA256_check.txt" SET /P WPF_SHA256_CHECK
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: WPF_SHA256_CHECK: {%WPF_SHA256_CHECK%} >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: SHA256 Check. >> %LOG_LOCATION%\%LOG_FILE%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: Check for Windows Ultimate Playbook
+::	remenent running file
+IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" DEL /F /Q "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt"
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 :varS
 :: Start of variable debug
@@ -1514,80 +1522,38 @@ IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	CHOCOLATEY has already b
 GoTo step6
 :://///////////////////////////////////////////////////////////////////////////
 
+
 :://///////////////////////////////////////////////////////////////////////////
 :step6
-:: Process Ultimate script file {cleaning, configurations, etc}
-::	Author uses Sorcerer's Apprentice as ultimate script file
+:: Process Windows updated via powershell
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step6 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO Step 6: Working on processing the Ultimate Commandlet...
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Invoking Windows Ultimate Playbook... >> %LOG_LOCATION%\%LOG_FILE%
+ECHO Step 6: Working on processing Windows updates...
 
 :trap6
-:: TRAP6 is to catch if the Ultimat file has been processed
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6 >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err60
-IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" GoTo fulti
-IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% GoTo skip6
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6 >> %LOG_LOCATION%\%LOG_FILE%
-
-:trap61
-:: TRAP 6.1 Self-Preservation against Ultimate commandlet not properly set for Exit /B
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
-FINDSTR /BLC:"EXIT /B" "%ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%" || GoTo err61
-IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	The Ultimate commandlet meets the Exit /B requirement! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
-
-:fulti
-:: FUNCTION Run the Ultimate Commandlet
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION [6] Ultimate commandlet >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %DATE% %TIME%: Ultimate file [%ULTIMATE_FILE_NAME%] is attempting to run... >> "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt"
-IF EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% CALL :subr2
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Return from subr2 >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" DEL /Y "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt"
-IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {running_%ULTIMATE_FILE_NAME%.txt} exists! >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %DATE% %TIME%: Ultimate file [%ULTIMATE_FILE_NAME%] ran. >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
-
-:jump2
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump2 >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} ran!) >> %LOG_LOCATION%\%LOG_FILE%
-GoTo step7
-
-:skip6
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip6 >> %LOG_LOCATION%\%LOG_FILE%
-IF NOT EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} has already run! >> %LOG_LOCATION%\%LOG_FILE%
-
-:://///////////////////////////////////////////////////////////////////////////
-:step7
-:: Process Windows updated via powershell
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 >> %LOG_LOCATION%\%LOG_FILE%
-ECHO Step 7: Working on processing Windows updates...
-
-:trap7
 :: TRAP7 is to catch if all Windows updates have already run
 :: this should be based off of a txt file generated by checking Windows update Get-WindowsUpdate
-IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" GoTo skip7
-:trap7.1
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\%PROCESS_6_FILE_NAME%" GoTo skip6
+:trap6.1
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
 :: Check to make sure powershell exist
 ::	this should go to an error
 ::	if this file exists, check already happened
-IF EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" GoTo trap7.2
-IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skip7
+IF EXIST "%LOG_LOCATION%\cache\var_PS_Version.txt" GoTo trap6.2
+IF DEFINED PSModulePath @powershell $PSVersionTable.PSVersion || GoTo skip6
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	PowerShell checks out based on global variable PSMODULEPATH >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6.1 >> %LOG_LOCATION%\%LOG_FILE%
 
-:trap7.2
+:trap6.2
 :: Check for Internet connectivity using Google Public DNS
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap6.2 >> %LOG_LOCATION%\%LOG_FILE%
 NSLOOKUP windowsupdate.microsoft.com 8.8.8.8 > %LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt
 FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt" || GoTo err
 FIND /I "Name:" "%LOG_LOCATION%\cache\var_nslookup_Microsoft-Update.txt" && IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Internet connection to Microsoft appears to be up! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.2 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap6.2 >> %LOG_LOCATION%\%LOG_FILE%
 
 :fWUP
 :: FUNCTION Windows Update via PowerShell
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step6 function WUP >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %DATE%%TIME%	START... >> %LOG_LOCATION%\Windows_Update_Powershell.log
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Processing Windows Updates via PowerShell... >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Get-WindowsUpdate 2> nul
@@ -1608,24 +1574,70 @@ ECHO. >> %LOG_LOCATION%\Windows_Update_Powershell.log
 :: If nothing to do skip install
 @powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || ECHO %DATE%%TIME%	Finnished Windows Updates >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
 IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {%PROCESS_7_FILE_NAME%} exists! >> %LOG_LOCATION%\%LOG_FILE%
-@powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || GoTo skip7
+@powershell Get-WindowsUpdate | FIND /I "%COMPUTERNAME%" || GoTo skip6
 IF DEFINED KB_BL @powershell Install-WindowsUpdate -NotKBArticleID %KB_BL% -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
 IF NOT DEFINED KB_BL @powershell Install-WindowsUpdate -AcceptAll -IgnoreReboot  >> %LOG_LOCATION%\Windows_Update_Powershell.log
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Windows updates requires a reboot! Rebooting! >> %LOG_LOCATION%\%LOG_FILE%
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (shutdown -r -t 20)
 @powershell Get-WURebootStatus -Silent  | (FIND /I "True") && (GoTo feTime)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 function WUP >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step6 function WUP >> %LOG_LOCATION%\%LOG_FILE%
+
+:skip6
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip6 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF NOT EXIST "%LOG_LOCATION%\%PROCESS_6_FILE_NAME%" (Type %LOG_LOCATION%\Windows_Update_Powershell.log >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%)
+IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF EXIST "%LOG_LOCATION%\%PROCESS_6_FILE_NAME%" DEL /Q /F "%LOG_LOCATION%\Windows_Update_Powershell.log"
+IF EXIST %LOG_LOCATION%\%PROCESS_6_FILE_NAME% ECHO %DATE% %TIME% Windows update via PowerShell has already run! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows update via PowerShell has already run! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: skip6 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Completed processing Windows Updates via PowerShell >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step6 >> %LOG_LOCATION%\%LOG_FILE%
+:://///////////////////////////////////////////////////////////////////////////
+
+
+:://///////////////////////////////////////////////////////////////////////////
+:step7
+:: Process Ultimate script file {cleaning, configurations, etc}
+::	Author uses Sorcerer's Apprentice as ultimate script file
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: step7 >> %LOG_LOCATION%\%LOG_FILE%
+ECHO Step 7: Working on processing Windows Ultimate Playbook Commandlet...
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Invoking Windows Ultimate Playbook... >> %LOG_LOCATION%\%LOG_FILE%
+
+:trap7
+:: TRAP7 is to catch if the Ultimat file has been processed
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7 >> %LOG_LOCATION%\%LOG_FILE%
+IF NOT EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% GoTo err70
+IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" GoTo fulti
+IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% GoTo skip7
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7 >> %LOG_LOCATION%\%LOG_FILE%
+
+:trap71
+:: TRAP 7.1 Self-Preservation against Windows Ultimate Playbook commandlet not properly set for Exit /B
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
+FINDSTR /BLC:"EXIT /B" "%ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%" || GoTo err71
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	The Ultimate commandlet meets the Exit /B requirement! >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: trap7.1 >> %LOG_LOCATION%\%LOG_FILE%
+
+:fulti
+:: FUNCTION Run the Ultimate Commandlet
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: FUNCTION [7] Windows Ultimate Playbook commandlet >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %DATE% %TIME%: Windows Ultimate Playbook file [%ULTIMATE_FILE_NAME%] is attempting to run... >> "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt"
+IF EXIST %ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME% CALL :subr2
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	Return from subr2 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" DEL /Y "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt"
+IF EXIST "%LOG_LOCATION%\running_%ULTIMATE_FILE_NAME%.txt" IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	File {running_%ULTIMATE_FILE_NAME%.txt} exists! >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %DATE% %TIME%: Windows Ultimate Playbook [%ULTIMATE_FILE_NAME%] ran. >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+
+:jump2
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Jump2 >> %LOG_LOCATION%\%LOG_FILE%
+IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} ran!) >> %LOG_LOCATION%\%LOG_FILE%
+GoTo step7
 
 :skip7
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: skip7 >> %LOG_LOCATION%\%LOG_FILE%
-IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF NOT EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" (Type %LOG_LOCATION%\Windows_Update_Powershell.log >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%)
-IF EXIST "%LOG_LOCATION%\Windows_Update_Powershell.log" IF EXIST "%LOG_LOCATION%\%PROCESS_7_FILE_NAME%" DEL /Q /F "%LOG_LOCATION%\Windows_Update_Powershell.log"
-IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% ECHO %DATE% %TIME% Windows update via PowerShell has already run! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Windows update via PowerShell has already run! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: skip7 >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Completed processing Windows Updates via PowerShell >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: step7 >> %LOG_LOCATION%\%LOG_FILE%
-:://///////////////////////////////////////////////////////////////////////////
+IF NOT EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] has already run! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Ultimate file {%ULTIMATE_FILE_NAME%} has already run! >> %LOG_LOCATION%\%LOG_FILE%
+
+
 
 GoTo end
 
@@ -1665,11 +1677,11 @@ GoTo jump8
 :subr2
 ::	Sub-Routine Ultimate Commandlet
 SETLOCAL ENABLEDELAYEDEXPANSION
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine Ultimate Commandlet [%ULTIMATE_FILE_NAME%] >> %LOG_LOCATION%\%LOG_FILE%
-ECHO %DATE% %TIME%: Ultimate commandlet [%ULTIMATE_FILE_NAME%] is running! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Sub-Routine Windows Ultimate Playbook Commandlet [%ULTIMATE_FILE_NAME%] >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %DATE% %TIME%: Windows Ultimate Playbook commandlet [%ULTIMATE_FILE_NAME%] is running! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
 CALL "%ULTIMATE_FILE_LOCATION%\%ULTIMATE_FILE_NAME%"
-IF %ERRORLEVEL% EQU 0 (ECHO %DATE% %TIME%: Ultimate file [%ULTIMATE_FILE_NAME%] ran successfully! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%) ELSE (
-	ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] did not run successfully! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%)
+IF %ERRORLEVEL% EQU 0 (ECHO %DATE% %TIME%: Ultimate file [%ULTIMATE_FILE_NAME%] ran successfully! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%) ELSE (
+	ECHO %DATE% %TIME% Ultimate file [%ULTIMATE_FILE_NAME%] did not run successfully! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%)
 SETLOCAL DISABLEDELAYEDEXPANSION
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Sub-Routine [subr2] >> %LOG_LOCATION%\%LOG_FILE%
 color 9E
@@ -1794,6 +1806,7 @@ IF EXIST %LOG_LOCATION%\%PROCESS_7_FILE_NAME% SET /A PROCESS_COUNT+=1
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Current Process Count: %PROCESS_COUNT% >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	Process Check Number: %PROCESS_CHECK_NUMBER% >> %LOG_LOCATION%\%LOG_FILE%
 IF %DEBUG_MODE% EQU 1 GoTo skipPFD
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% echo TIMESTAMP: %DATE% %TIME% > %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% (Type %LOG_LOCATION%\%PROCESS_1_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%)
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_1_FILE_NAME% && (
 	IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	%PROCESS_1_FILE_NAME% file just got deleted!) >> %LOG_LOCATION%\%LOG_FILE%
@@ -1818,6 +1831,7 @@ IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% del /F /Q %LOG_LOCATION%\%PROCESS_
 
 :skipPFD
 IF %DEBUG_MODE% EQU 0 GoTo skipDBM
+IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% echo TIMESTAMP: %DATE% %TIME% > %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_1_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_2_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
 IF %PROCESS_COUNT% EQU %PROCESS_CHECK_NUMBER% Type %LOG_LOCATION%\%PROCESS_3_FILE_NAME% >> %LOG_LOCATION%\%PROCESS_COMPLETE_FILE%
@@ -2203,33 +2217,33 @@ IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error51 >> %LOG_
 GoTo step5
 
 :://///////////////////////////////////////////////////////////////////////////
-:: ERROR LEVEL 60's (ULTIMATE)
+:: ERROR LEVEL 70's (ULTIMATE)
 
-:err60
+:err70
 :: ERROR 60 (Ulimate file cannot be found or is off-line)
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error60 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error70 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	FAILED to load Ultimate FILE {%ULTIMATE_FILE_NAME%} from %ULTIMATE_FILE_LOCATION% >> %LOG_LOCATION%\%LOG_FILE%
 IF NOT EXIST %ULTIMATE_FILE_LOCATION% ECHO %ISO_DATE% %TIME% [ERROR]	Ultimate file location [%ULTIMATE_FILE_LOCATION%] is OFF-LINE! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	Aborting running {%ULTIMATE_FILE_NAME%}!
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error60 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error70 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
-:err61
+:err71
 :: ERROR 61 (Ulimate file doesn't meet the exit requirements) commandlet self-presevation
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error61 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error71 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	The Ultimate commandlet [%ULTIMATE_FILE_NAME%] doesn't meet the "EXIT /B" requirement! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting running the Ultimate commandlet [%ULTIMATE_FILE_NAME%] >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error61 >> %LOG_LOCATION%\%LOG_FILE%
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error71 >> %LOG_LOCATION%\%LOG_FILE%
 GoTo end
 
-:err70
-:: ERROR 70 to handle Microsoft/Windows updates
-IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error70 >> %LOG_LOCATION%\%LOG_FILE%
+:err60
+:: ERROR 60 to handle Microsoft/Windows updates
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error60 >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	No network connection to Microsoft site to process updates! >> %LOG_LOCATION%\%LOG_FILE%
 IF %LOG_LEVEL_WARN% EQU 1 ECHO %ISO_DATE% %TIME% [WARN]	Aborting Microsoft Windows updates via PowerShell! >> %LOG_LOCATION%\%LOG_FILE%
-IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	No network connection to Microsoft site to process updates! >> %LOG_LOCATION%\%PROCESS_7_FILE_NAME%
+IF %LOG_LEVEL_FATAL% EQU 1 ECHO %ISO_DATE% %TIME% [FATAL]	No network connection to Microsoft site to process updates! >> %LOG_LOCATION%\%PROCESS_6_FILE_NAME%
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: error70 >> %LOG_LOCATION%\%LOG_FILE%
-GoTo skip7
+GoTo skip6
 
 :err80
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: error80 >> %LOG_LOCATION%\%LOG_FILE%

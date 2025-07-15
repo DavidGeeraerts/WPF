@@ -12,7 +12,7 @@
 ## Change
 - All variables start with "$"
 - Dump all the process complete logs into a report instead of the COMPLETED_log
-- COMPLETED_log should just have a timestamp
+
 
 ## Fix
 - Check for INCOMPLETE file and write to log
@@ -41,6 +41,10 @@
 
 
 ## DONE
+
+
+#### 2025-07-15
+- COMPLETED_log should just have a timestamp
 
 #### 2025-07
 - @powershell Rename-Computer -NewName "NewHostname" -Restart
