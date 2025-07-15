@@ -22,12 +22,22 @@
 
 ---
 
+## Version 4.19.0 (2025-07-15)
+#### Fixed
+- WPF total time
+
+#### Changed
+- name of playbook
+- WPF total time handling
+- Process 6 --> 7
+- Process 7 --> 6
+  
+---
+
 ## Version 4.18.1 (2025-06-30)
 #### Fixed
 - logging for hostname rename
-
----
-
+- 
 
 ## Version 4.18.0 (2025-03-21)
 #### Added
