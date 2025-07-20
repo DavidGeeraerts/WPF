@@ -1,10 +1,10 @@
 # Windows Post-Flight Commander
 
-
 (the anti-Windows Deployment Services | Doppelganer to Windows Autopilot)
 
-
-
+## WARNING!
+Though this is production for me, for public use, it should be considered Alpha.
+If someone else wanted to use this for their production workflow, I would work on making it so.
 
 ***No [Full] Documentation yet! Some Documentation in the config file.***
 

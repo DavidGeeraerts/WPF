@@ -178,25 +178,25 @@
                     <Order>3</Order>
                     <Description>Windows Post Flight Start</Description>
                     <RequiresUserInput>false</RequiresUserInput>
-                    <CommandLine>D:\Windows-Post-Flight.cmd</CommandLine>
+                    <CommandLine>D:\Windows-Post-Flight-Dev.cmd</CommandLine>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
                     <Order>4</Order>
                     <Description>Windows Post Flight Start</Description>
                     <RequiresUserInput>false</RequiresUserInput>
-                    <CommandLine>E:\Windows-Post-Flight.cmd</CommandLine>
+                    <CommandLine>E:\Windows-Post-Flight-Dev.cmd</CommandLine>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
                     <Order>5</Order>
                     <Description>Windows Post Flight Start</Description>
                     <RequiresUserInput>false</RequiresUserInput>
-                    <CommandLine>F:\Windows-Post-Flight.cmd</CommandLine>
+                    <CommandLine>F:\Windows-Post-Flight-Dev.cmd</CommandLine>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
                     <Order>6</Order>
                     <Description>Windows Post Flight Start</Description>
                     <RequiresUserInput>false</RequiresUserInput>
-                    <CommandLine>G:\Windows-Post-Flight.cmd</CommandLine>
+                    <CommandLine>G:\Windows-Post-Flight-Dev.cmd</CommandLine>
                 </SynchronousCommand>
 			</FirstLogonCommands>
 		</component>

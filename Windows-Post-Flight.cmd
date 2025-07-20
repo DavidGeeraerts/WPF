@@ -39,9 +39,9 @@ color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SET SCRIPT_NAME=Windows-Post-Flight
-SET SCRIPT_VERSION=4.19.0
-SET SCRIPT_BUILD=20250715 0800
+SET SCRIPT_NAME=Windows-Post-Flight-Dev
+SET SCRIPT_VERSION=4.20.0
+SET SCRIPT_BUILD=20250718 1500
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -61,7 +61,7 @@ REM This has to be first to check that a configuration file actually exists
 
 :://///////////////////////////////////////////////////////////////////////////
 SET CONFIG_FILE_NAME=%SCRIPT_NAME%.config
-SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.9.0
+SET WPF_CONFIG_SCHEMA_VERSION_MIN=3.11.0
 IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :://///////////////////////////////////////////////////////////////////////////
 
@@ -69,7 +69,7 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :: Working Directory for Post-Flight
 ::  this is also the (local storage) seed location for Post-Flight
 SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
-SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight.cmd"
+SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight-Dev.cmd"
 
 :: Default Log Files Settings; will be overriden by config file
 ::  Main script log file
@@ -337,6 +337,8 @@ FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"NETDOM_REBOOT" "%~dp0\%CONFIG_
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"AD_NETLOGON" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "AD_NETLOGON=%%V"
 ::   AD_COMPUTER_OU
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"AD_COMPUTER_OU" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "AD_COMPUTER_OU=%%V"
+:: AD_DA_X
+FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"AD_DA_X" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "AD_DA_X=%%V"
 ::	KB_BL
 FOR /F "tokens=2 delims=^=" %%V IN ('FINDSTR /BC:"KB_BL" "%~dp0\%CONFIG_FILE_NAME%"') DO SET "KB_BL=%%V"
 ::   CHOCO_META_PACKAGE
@@ -759,6 +761,7 @@ ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $REBOOT: {%$REBOOT%} >> %LOG_LOCATION%\
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $SERIAL_NUMBER: {%$SERIAL_NUMBER%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $TimeZone: {%$TimeZone%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: $UUID: %$UUID% >> %LOG_LOCATION%\%LOG_FILE%
+ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_DA_X: %AD_DA_X% >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_NETLOGON: {%AD_NETLOGON%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_COMPUTER_OU: {%AD_COMPUTER_OU%} >> %LOG_LOCATION%\%LOG_FILE%
 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: CHOCOLATEY_ADVANCED: {%CHOCOLATEY_ADVANCED%} >> %LOG_LOCATION%\%LOG_FILE%
@@ -1403,6 +1406,21 @@ IF %ERRORLEVEL% EQU 0 ECHO %DATE% %TIME% Joined {%NETDOM_DOMAIN%} domain >> %LOG
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Joined {%NETDOM_DOMAIN%} domain!) >> %LOG_LOCATION%\%LOG_FILE%
 IF EXIST %LOG_LOCATION%\%PROCESS_4_FILE_NAME% ECHO %DATE% %TIME% Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%PROCESS_4_FILE_NAME%
 IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Computer is rebooting in %NETDOM_REBOOT% seconds! >> %LOG_LOCATION%\%LOG_FILE%
+
+:: Domain Administrators Check
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER: Check Domain Administrators... >> %LOG_LOCATION%\%LOG_FILE%
+IF %AD_DA_X% EQU 0 GoTo skipADDAX
+net localgroup Administrators > %LOG_LOCATION%\cache\localgroup.txt
+REM Sometimes there's a lag with Domain Admins getting added, so provide some timeout
+net localgroup Administrators | FIND "Domain Admins" 2> nul || timeout /T 10
+net localgroup Administrators "%NETDOM_DOMAIN%\Domain Admins" /DELETE
+SET AD_DA_X_ERRORLEVEL=%ERRORLEVEL%
+IF %LOG_LEVEL_DEBUG% EQU 1 ECHO %ISO_DATE% %TIME% [DEBUG]	VARIABLE: AD_DA_X_ERRORLEVEL: {%AD_DA_X_ERRORLEVEL%} >> %LOG_LOCATION%\%LOG_FILE%
+IF %AD_DA_X_ERRORLEVEL% EQU 0 (IF %LOG_LEVEL_INFO% EQU 1 ECHO %ISO_DATE% %TIME% [INFO]	Domain Admins removed from local administrator group! >> %LOG_LOCATION%\%LOG_FILE%) ELSE (
+	IF %LOG_LEVEL_ERROR% EQU 1 ECHO %ISO_DATE% %TIME% [ERROR]	FAILED to remove Domain Admins from local administrator group! >> %LOG_LOCATION%\%LOG_FILE%
+	)
+:skipADDAX
+IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	EXIT: Check Domain Administrators. >> %LOG_LOCATION%\%LOG_FILE%
 
 :: Adds the domain account used to join domain into local administrators group
 IF %LOG_LEVEL_TRACE% EQU 1 ECHO %ISO_DATE% %TIME% [TRACE]	ENTER Sub-Function Adding Domain User into Local Administrators Group >> %LOG_LOCATION%\%LOG_FILE%

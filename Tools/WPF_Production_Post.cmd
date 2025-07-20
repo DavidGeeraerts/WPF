@@ -73,7 +73,8 @@ echo.
 :: COPY DEVELOPER FILES TO WORKING FILES Keeping DEV
 COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight-dev.cmd" "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd"
 COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight-dev.config" "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config"
-echo dev copied to workingecho.
+echo dev copied to working
+echo.
 :: UPDATE THE SHA256 FILE
 IF EXIST "var_get_WPF_SHA256.txt" DEL /Q /F var_get_WPF_SHA256.txt
 FOR /F "skip=1 tokens=1" %%P IN ('certUtil -hashfile "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd" SHA256') DO ECHO %%P>> var_get_WPF_SHA256.txt
@@ -82,6 +83,8 @@ ECHO %VAR_GET_WPF_SHA256%> "%MASTER_SOURCE_WPF%\Windows-Post-Flight_SHA256.txt"
 del /Q var_get_WPF_SHA256.txt
 echo SHA256 updated.
 echo.
+:: Report out
+IF EXIST %FLASH_DRIVE_VOLUME% dir %FLASH_DRIVE_VOLUME% /S /A:-DA
 
 :EOF
 ENDLOCAL

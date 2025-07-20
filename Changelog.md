@@ -22,6 +22,16 @@
 
 ---
 
+## Version 4.20.0 (2025-07-18)
+#### Added
+- Domain Admin check to remove
+
+#### Changed
+- (USB) Seed updater tool 
+ 
+---
+
+
 ## Version 4.19.0 (2025-07-15)
 #### Fixed
 - WPF total time
@@ -31,8 +41,6 @@
 - WPF total time handling
 - Process 6 --> 7
 - Process 7 --> 6
-  
----
 
 ## Version 4.18.1 (2025-06-30)
 #### Fixed
