@@ -22,15 +22,24 @@
 
 ---
 
+4.20.1
+## Version 4.20.1 (2025-08-05)
+#### Changed
+- main and dev cmd are one and the same
+
+#### Fixed
+- (USB) Seed updater tool 
+- Tool Production post
+ 
+---
+
+
 ## Version 4.20.0 (2025-07-18)
 #### Added
 - Domain Admin check to remove
 
 #### Changed
 - (USB) Seed updater tool 
- 
----
-
 
 ## Version 4.19.0 (2025-07-15)
 #### Fixed

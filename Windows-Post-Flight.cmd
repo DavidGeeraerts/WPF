@@ -39,9 +39,9 @@ color 9E
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 ::::	Program info	:::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SET SCRIPT_NAME=Windows-Post-Flight-Dev
-SET SCRIPT_VERSION=4.20.0
-SET SCRIPT_BUILD=20250718 1500
+SET SCRIPT_NAME=Windows-Post-Flight
+SET SCRIPT_VERSION=4.20.1
+SET SCRIPT_BUILD=20250805 1400
 Title %SCRIPT_NAME% Version: %SCRIPT_VERSION%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -69,7 +69,7 @@ IF NOT EXIST %~dp0\%CONFIG_FILE_NAME% GoTo errCONF
 :: Working Directory for Post-Flight
 ::  this is also the (local storage) seed location for Post-Flight
 SET "POST_FLIGHT_DIR=%ProgramData%\%SCRIPT_NAME%"
-SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight-Dev.cmd"
+SET "POST_FLIGHT_CMD_NAME=Windows-Post-Flight.cmd"
 
 :: Default Log Files Settings; will be overriden by config file
 ::  Main script log file

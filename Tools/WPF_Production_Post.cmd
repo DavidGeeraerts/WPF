@@ -22,7 +22,7 @@ setlocal enableextensions
 :: Windows Post Flight Seed updater
 :: PURPOSE: Populate or update the flash drive with all needed files
 SET Name=Windows_Post-Flight_Production_Post
-SET Version=1.1.0
+SET Version=1.2.0
 Title %Name% Version:%Version%
 Prompt WPFPU$G
 color 0B
@@ -36,7 +36,7 @@ mode con:lines=50
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 :: Master REPO
-SET "MASTER_SOURCE_WPF=D:\Projects\Script Code\Windows Post-Flight"
+SET "MASTER_SOURCE_WPF=D:\Projects\Script Code\Windows-Post-Flight"
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::
