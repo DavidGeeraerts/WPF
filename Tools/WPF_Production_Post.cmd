@@ -72,7 +72,9 @@ echo working renamed to old
 echo.
 :: COPY DEVELOPER FILES TO WORKING FILES Keeping DEV
 COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight-dev.cmd" "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd"
-COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight-dev.config" "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config"
+REM The dev.config is different and shouldn't be copied
+REM Changes to dev.config should be manually merged into the working config.
+:: COPY /Y "%MASTER_SOURCE_WPF%\Windows-Post-Flight-dev.config" "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config"
 echo dev copied to working
 echo.
 :: UPDATE THE SHA256 FILE
