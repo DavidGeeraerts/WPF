@@ -2,11 +2,6 @@
 
 ## Add
 
-- Config file parameter to remove domain admins from domain computer
-
-
-
-
 	
 
 ## Change
@@ -42,6 +37,8 @@
 
 ## DONE
 
+#### 2025-07
+- Config file parameter to remove domain admins from domain computer
 
 #### 2025-07-15
 - COMPLETED_log should just have a timestamp

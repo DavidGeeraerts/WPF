@@ -59,7 +59,12 @@ echo.
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 CD /D %MASTER_SOURCE_WPF%
-
+echo Processing attributes...
+ATTRIB -H .\Configurations\Domain_Join_Password.txt
+ATTRIB -H .\Configurations\Local_Administrator_Password.txt
+ATTRIB -A /S /D
+ATTRIB +H .\Configurations\Domain_Join_Password.txt
+ATTRIB +H .\Configurations\Local_Administrator_Password.txt
 :: DELETE THE OLD FILES
 DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd.old" 2> nul
 DEL /Q "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config.old" 2> nul
@@ -67,7 +72,6 @@ echo old deleted
 echo.
 :: RENAME THE WORKING FILES TO OLD
 RENAME "%MASTER_SOURCE_WPF%\Windows-Post-Flight.cmd" "Windows-Post-Flight.cmd.old"
-RENAME "%MASTER_SOURCE_WPF%\Windows-Post-Flight.config" "Windows-Post-Flight.config.old"
 echo working renamed to old 
 echo.
 :: COPY DEVELOPER FILES TO WORKING FILES Keeping DEV
@@ -85,10 +89,22 @@ ECHO %VAR_GET_WPF_SHA256%> "%MASTER_SOURCE_WPF%\Windows-Post-Flight_SHA256.txt"
 del /Q var_get_WPF_SHA256.txt
 echo SHA256 updated.
 echo.
-:: Report out
-IF EXIST %FLASH_DRIVE_VOLUME% dir %FLASH_DRIVE_VOLUME% /S /A:-DA
 
-:EOF
+:: Ignore certain files
+ATTRIB -A *.old
+CLS
+echo --------------------------------------------------------------------------
+echo.
+echo			%NAME%
+echo.
+ECHO %DATE% %TIME%
+echo --------------------------------------------------------------------------
+:: Report out
+echo.
+echo The following files have been updated:
+echo.
+dir /A:-DA
+dir /A:-DA .\Configurations 2> nul
 ENDLOCAL
-TIMEOUT /T 60
+TIMEOUT /T 120
 EXIT
